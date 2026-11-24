@@ -1,0 +1,18 @@
+# OPCIONAL. El plan Free de Supabase PAUSA el proyecto tras ~7 días sin actividad.
+# Este flujo hace una consulta pública ligera cada 3 días para evitarlo.
+# Requiere los "Secrets" del repositorio: SUPABASE_URL y SUPABASE_ANON_KEY.
+# GitHub Actions es gratis en repos públicos y tiene minutos gratuitos mensuales en privados (verifica tu cuota).
+name: keepalive
+on:
+  schedule:
+    - cron: '17 6 */3 * *'
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consulta ligera a Supabase
+        run: |
+          curl -fsS "${{ secrets.SUPABASE_URL }}/rest/v1/rpc/get_table_by_token" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" -H "Content-Type: application/json" \
+            -d '{"p_token":"keepalive"}' > /dev/null || true

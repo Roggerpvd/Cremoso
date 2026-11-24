@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+.env.local
+*.log
+backups/
+supabase/.temp
+supabase/.branches
+supabase/tests/last_run.log

@@ -1,0 +1,101 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+/* ------------------------------------------------------------------
+   RestoPOS · tema "azul acero" con glassmorphism + neumorfismo.
+   Tipografía: Inter (variable, empaquetada: funciona sin Internet).
+   Para cambiar el color principal basta con editar la escala --color-brand-*.
+------------------------------------------------------------------ */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --color-brand-50:  #f0f5fa;
+  --color-brand-100: #dde8f2;
+  --color-brand-200: #bfd3e6;
+  --color-brand-300: #94b6d3;
+  --color-brand-400: #6a98c1;
+  --color-brand-500: #4682b4; /* steel blue */
+  --color-brand-600: #386994;
+  --color-brand-700: #2f5578;
+  --color-brand-800: #284561;
+  --color-brand-900: #223a50;
+}
+
+:root {
+  --neu-light: rgba(255, 255, 255, .95);
+  --neu-dark: rgba(150, 166, 188, .42);
+  --glass-bg: rgba(255, 255, 255, .6);
+  --glass-border: rgba(255, 255, 255, .75);
+}
+
+@layer base {
+  html { -webkit-tap-highlight-color: transparent; }
+  body {
+    @apply text-slate-900 antialiased;
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss03";
+    background-color: #f4f6f8;
+    background-image:
+      radial-gradient(60rem 38rem at 88% -8%, rgba(70, 130, 180, .20), transparent 62%),
+      radial-gradient(52rem 38rem at -8% 108%, rgba(148, 182, 211, .26), transparent 60%);
+    background-attachment: fixed;
+  }
+  h1, h2, h3 { letter-spacing: -0.025em; }
+  h1 { font-weight: 700; }
+  button { @apply cursor-pointer; }
+}
+
+@layer components {
+  /* Botones en forma de píldora */
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition select-none disabled:opacity-50 disabled:cursor-not-allowed active:scale-[.98]; }
+  .btn-primary { @apply bg-brand-600 text-white hover:bg-brand-700; box-shadow: 0 8px 16px -8px rgba(40, 69, 97, .7), inset 0 1px 0 rgba(255, 255, 255, .22); }
+  .btn-secondary { @apply bg-slate-100 text-slate-800 hover:bg-white; box-shadow: 4px 4px 10px var(--neu-dark), -4px -4px 10px var(--neu-light); }
+  .btn-secondary:active { box-shadow: inset 3px 3px 7px var(--neu-dark), inset -3px -3px 7px var(--neu-light); }
+  .btn-danger { @apply bg-red-600 text-white hover:bg-red-700; box-shadow: 0 8px 16px -8px rgba(185, 28, 28, .6); }
+  .btn-ghost { @apply text-slate-600 hover:bg-white/60; }
+  .btn-sm { @apply px-3 py-1.5 text-xs; }
+  .btn-lg { @apply px-6 py-3 text-base; }
+
+  /* Campos hundidos (neumorfismo) */
+  .input { @apply w-full rounded-xl border border-transparent bg-slate-100/80 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-200 disabled:opacity-60; box-shadow: inset 3px 3px 7px var(--neu-dark), inset -3px -3px 7px var(--neu-light); }
+  .label { @apply mb-1 block text-xs font-medium text-slate-500; }
+
+  /* Tarjetas de vidrio (glassmorphism) */
+  .card { @apply rounded-3xl border; background: var(--glass-bg); border-color: var(--glass-border); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 14px 34px -16px rgba(40, 69, 97, .28); }
+
+  /* Chips y etiquetas */
+  .chip { @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-transparent bg-slate-100 px-3.5 py-1.5 text-sm font-medium text-slate-700 transition; box-shadow: 3px 3px 8px var(--neu-dark), -3px -3px 8px var(--neu-light); }
+  .chip-on { @apply bg-brand-600 text-white; box-shadow: 0 8px 16px -8px rgba(40, 69, 97, .7), inset 0 1px 0 rgba(255, 255, 255, .22); }
+  .badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold; }
+
+  /* Titular grande estilo "landing" */
+  .display { @apply font-bold text-slate-950; font-size: clamp(2.25rem, 6vw, 3.75rem); line-height: .98; letter-spacing: -0.04em; }
+}
+
+@media print {
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; left: 0; top: 0; width: 100%; }
+  .print-card { break-inside: avoid; page-break-inside: avoid; }
+  @page { margin: 12mm; }
+}
+
+/* Ticket / hoja de boleta: solo existe al imprimir (PrintHost) */
+#print-root { display: none; }
+@media print {
+  #print-root { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
+}
+.ticket { width: 76mm; margin: 0 auto; padding: 2mm 0; color: #000; background: #fff; font-family: "Courier New", ui-monospace, monospace; font-size: 11.5px; line-height: 1.35; }
+.ticket h1 { font-size: 15px; font-weight: 700; text-align: center; margin: 0; }
+.ticket .c { text-align: center; }
+.ticket .r { text-align: right; }
+.ticket hr { border: 0; border-top: 1px dashed #000; margin: 5px 0; }
+.ticket table { width: 100%; border-collapse: collapse; }
+.ticket td { vertical-align: top; padding: 1px 0; }
+.ticket .note { padding-left: 14px; font-size: 10.5px; }
+.ticket .big { font-size: 14px; font-weight: 700; }
+.ticket .warn { border: 1px solid #000; padding: 3px; margin: 4px 0; text-align: center; font-weight: 700; }
+.sheet { width: 170mm; margin: 0 auto; color: #000; background: #fff; font-family: ui-sans-serif, system-ui, Arial, sans-serif; font-size: 13px; }
+.sheet h1 { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+.sheet table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.sheet th, .sheet td { border: 1px solid #000; padding: 4px 6px; text-align: left; }
+.sheet th.r, .sheet td.r { text-align: right; }
