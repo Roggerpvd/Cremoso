@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { FileSpreadsheet } from 'lucide-react'
 import { AppShell } from '../components/AppShell'
+import { DatePicker } from '../components/DatePicker'
 import { Empty, ErrorBox, Loading } from '../components/ui'
 import { api } from '../lib/api'
 import { errorMessage } from '../lib/errors'
@@ -42,8 +43,8 @@ export default function Reports() {
     <AppShell>
       <div className="mx-auto max-w-5xl space-y-4 p-3 sm:p-5">
         <div className="card flex flex-wrap items-end gap-3 p-4">
-          <div><label className="label">Desde</label><input type="date" className="input" value={from} max={to} onChange={(e) => setFrom(e.target.value)} /></div>
-          <div><label className="label">Hasta</label><input type="date" className="input" value={to} min={from} onChange={(e) => setTo(e.target.value)} /></div>
+          <div><label className="label">Desde</label><DatePicker value={from} max={to} range={[from, to]} onChange={setFrom} /></div>
+          <div><label className="label">Hasta</label><DatePicker value={to} min={from} range={[from, to]} onChange={setTo} /></div>
           <div className="flex gap-1.5">
             <button className="btn btn-secondary btn-sm" onClick={() => preset(0)}>Hoy</button>
             <button className="btn btn-secondary btn-sm" onClick={() => preset(-1, -1)}>Ayer</button>

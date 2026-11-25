@@ -34,8 +34,11 @@ Sistema real (no maqueta) de gestión de pedidos: caja/POS, carta digital, QR po
    npm run dev            # desarrollo: http://localhost:5173
    npm run build          # producción → dist/
    ```
-7. **Despliega `dist/`** en Cloudflare Pages (recomendado: ancho de banda ilimitado en Free) o Netlify (créditos mensuales). Para Netlify ya existe `netlify.toml`; para Cloudflare Pages, `public/_redirects` ya maneja la SPA. **No uses Vercel Hobby:** es solo para uso no comercial.
+7. **Despliega `dist/`** en Cloudflare Pages (recomendado: ancho de banda ilimitado en Free) o Netlify (créditos mensuales). Para Netlify ya existe `netlify.toml`; para Cloudflare (Workers con archivos estáticos) ya existe `wrangler.jsonc`, que sirve `index.html` en rutas como `/caja`. **No agregues `public/_redirects` en Cloudflare:** provoca el error «Infinite loop detected». **No uses Vercel Hobby:** es solo para uso no comercial.
 8. Entra a `/ajustes` y pon la **URL base pública** (la del sitio desplegado) y luego imprime los QR desde `/mesas`.
+
+### Diseño y movimiento
+Tema azul acero, calendario propio y animaciones cortas y suaves. Criterios y valores en `docs/DISENO.md`.
 
 ### Emitir la boleta con un agente de navegador (opcional)
 En **Comprobantes → Boleta**, el botón **Copiar para el agente** genera un bloque para el atajo `/emitir-boleta-sunat` de Claude en Chrome: el agente llena el formulario de SUNAT con tu sesión ya abierta y se detiene; **tú presionas Emitir**. Guía, riesgos y el archivo del atajo en `docs/EMISION_CON_AGENTE.md` y `agent/skills/emitir-boleta-sunat/SKILL.md`. No está probado contra el portal real.

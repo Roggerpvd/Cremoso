@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FileText, Printer, Receipt as ReceiptIcon } from 'lucide-react'
 import { AppShell } from '../components/AppShell'
+import { DatePicker } from '../components/DatePicker'
 import { BoletaModal } from '../components/BoletaModal'
 import { printNode } from '../components/Print'
 import { Ticket } from '../components/Ticket'
@@ -57,11 +58,11 @@ export default function Receipts() {
     <AppShell>
       <div className="mx-auto max-w-4xl space-y-4 p-3 sm:p-5">
         <div className="card flex flex-wrap items-end gap-3 p-4">
-          <div><label className="label">Fecha de cobro</label><input type="date" className="input" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value || todayISO())} /></div>
+          <div><label className="label">Fecha de cobro</label><DatePicker value={date} max={todayISO()} onChange={(v) => setDate(v || todayISO())} /></div>
           <p className="max-w-md text-xs text-slate-500">Aquí imprimes el <b>ticket</b> de cualquier cuenta cobrada y preparas la <b>boleta</b>. La boleta oficial se emite en SUNAT; el sistema guarda los datos y la serie-número resultante.</p>
         </div>
         {loading ? <Loading /> : error ? <ErrorBox text={error} onRetry={load} /> : !groups.length ? <Empty text="No hay cobros en esa fecha." /> : (
-          <ul className="space-y-2">
+          <ul className="stagger space-y-2">
             {groups.map((g) => {
               const r = receipts.get(g.group_id)
               return (

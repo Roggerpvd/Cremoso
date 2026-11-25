@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Loader2, Wifi, WifiOff, X, QrCode, Utensils } from 'lucide-react'
 import type { OrderChannel, OrderStatus } from '../lib/types'
 import { STATUS_LABEL } from '../lib/types'
@@ -22,8 +22,12 @@ export const ChannelBadge = ({ channel }: { channel: OrderChannel }) =>
 
 export const Spinner = ({ className = '' }: { className?: string }) => <Loader2 className={`animate-spin ${className}`} size={20} />
 
+/** Esqueleto de carga: ocupa el lugar del contenido y se siente más rápido que un spinner. */
 export const Loading = ({ text = 'Cargando…' }: { text?: string }) => (
-  <div className="flex items-center justify-center gap-2 p-10 text-slate-500"><Spinner /> {text}</div>
+  <div className="space-y-3 p-4" role="status" aria-busy="true" aria-label={text}>
+    <div className="skeleton h-12" /><div className="skeleton h-12 [animation-delay:120ms]" /><div className="skeleton h-12 [animation-delay:240ms]" />
+    <span className="sr-only">{text}</span>
+  </div>
 )
 
 export const ErrorBox = ({ text, onRetry }: { text: string; onRetry?: () => void }) => (
@@ -51,18 +55,28 @@ export const ConnectionPill = ({ conn, dark = false }: { conn: Conn; dark?: bool
 export function Modal({ title, onClose, children, wide = false, footer }: {
   title: string; onClose: () => void; children: ReactNode; wide?: boolean; footer?: ReactNode
 }) {
+  // Salida breve (150 ms) antes de desmontar: el diálogo no desaparece de golpe
+  const [closing, setClosing] = useState(false)
+  const timer = useRef<number | undefined>(undefined)
+  const close = useCallback(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return onClose()
+    setClosing(true)
+    window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(onClose, 150)
+  }, [onClose])
+  useEffect(() => () => window.clearTimeout(timer.current), [])
   useEffect(() => {
-    const h = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const h = (e: KeyboardEvent) => e.key === 'Escape' && close()
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
-  }, [onClose])
+  }, [close])
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-0 sm:items-center sm:p-4" onMouseDown={onClose}>
-      <div className={`flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'}`}
+    <div data-closing={closing} className="modal-overlay fixed inset-0 z-50 flex items-end justify-center bg-slate-900/45 p-0 backdrop-blur-[3px] sm:items-center sm:p-4" onMouseDown={close}>
+      <div data-closing={closing} className={`modal-panel flex max-h-[92vh] w-full flex-col rounded-t-3xl border border-white/70 bg-white/90 shadow-2xl backdrop-blur-xl sm:rounded-3xl ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'}`}
         onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+        <div className="flex items-center justify-between border-b border-slate-200/70 px-5 py-3">
           <h2 className="text-base font-semibold">{title}</h2>
-          <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Cerrar"><X size={18} /></button>
+          <button className="btn btn-ghost btn-sm" onClick={close} aria-label="Cerrar"><X size={18} /></button>
         </div>
         <div className="flex-1 overflow-y-auto p-5">{children}</div>
         {footer && <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">{footer}</div>}
@@ -82,8 +96,8 @@ export const Field = ({ label, children, hint }: { label: string; children: Reac
 export const Toggle = ({ checked, onChange, label, disabled }: { checked: boolean; onChange: (v: boolean) => void; label?: string; disabled?: boolean }) => (
   <label className={`inline-flex items-center gap-2 text-sm ${disabled ? 'opacity-50' : 'cursor-pointer'}`}>
     <button type="button" role="switch" aria-checked={checked} disabled={disabled} onClick={() => onChange(!checked)}
-      className={`relative h-6 w-11 rounded-full transition ${checked ? 'bg-emerald-500' : 'bg-slate-300'}`}>
-      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${checked ? 'left-[22px]' : 'left-0.5'}`} />
+      className={`relative h-6 w-11 rounded-full transition-colors duration-200 active:scale-95 ${checked ? 'bg-brand-600' : 'bg-slate-300'}`}>
+      <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
     </button>
     {label}
   </label>

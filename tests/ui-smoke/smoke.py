@@ -160,6 +160,17 @@ try:
         check('Comprobante' in t and t.strip().endswith('¡Gracias por su visita!'), 'Ticket: dice Comprobante y cierra con "¡Gracias por su visita!"')
         page.wait_for_function('window.__printed >= 1', timeout=3000)
         check(True, 'Ticket: dispara la impresión')
+        # Calendario moderno: abre, navega con teclado y cambia la fecha
+        page.goto(f'http://127.0.0.1:{PORT}/comprobantes'); page.wait_for_selector('[data-trigger]', timeout=8000)
+        before = page.locator('[data-trigger]').inner_text()
+        page.click('[data-trigger]'); page.wait_for_selector('[role=dialog][aria-label="Elegir fecha"]', timeout=3000); time.sleep(0.4)
+        check(page.locator('[role=gridcell]').count() == 42, 'Calendario: muestra 6 semanas (42 días)')
+        if os.environ.get('SHOTS'): page.screenshot(path='/tmp/shot_calendar.png')
+        page.keyboard.press('ArrowLeft'); page.keyboard.press('Enter'); time.sleep(0.4)
+        after = page.locator('[data-trigger]').inner_text()
+        check(after != before and page.locator('[role=dialog][aria-label="Elegir fecha"]').count() == 0, 'Calendario: flecha izquierda + Enter elige el día anterior y se cierra')
+        page.click('[data-trigger]'); page.wait_for_selector('[role=dialog][aria-label="Elegir fecha"]'); page.keyboard.press('Escape'); time.sleep(0.3)
+        check(page.locator('[role=dialog][aria-label="Elegir fecha"]').count() == 0, 'Calendario: Esc lo cierra')
         if os.environ.get('SHOTS'):
             page.emulate_media(media='print'); page.screenshot(path='/tmp/ticket.png', clip=dict(x=450, y=0, width=470, height=760)); page.emulate_media(media='screen')
         page.evaluate("document.getElementById('print-root')?.remove()")

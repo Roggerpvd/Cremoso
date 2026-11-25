@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { BarChart3, BookOpen, ChefHat, ListChecks, LogOut, QrCode, ReceiptText, Settings, ShoppingCart, Users } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { useSettings } from '../lib/settings'
@@ -18,9 +18,40 @@ const NAV = [
   { to: '/ajustes', label: 'Ajustes', icon: Settings, perms: ['settings.manage'] },
 ]
 
+// Posición del indicador de la página anterior: al cambiar de pantalla el indicador DESLIZA desde allí
+let lastIndicator: { left: number; width: number } | null = null
+
 export function AppShell({ children, dark = false, right }: { children: ReactNode; dark?: boolean; right?: ReactNode }) {
   const { profile, can, signOut } = useAuth()
   const { settings } = useSettings()
+  const { pathname } = useLocation()
+  const navRef = useRef<HTMLElement>(null)
+  const [ind, setInd] = useState<{ left: number; width: number } | null>(lastIndicator)
+  const [slide, setSlide] = useState(false)
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = navRef.current?.querySelector<HTMLElement>('[aria-current="page"]')
+      return el ? { left: el.offsetLeft, width: el.offsetWidth } : null
+    }
+    const next = measure()
+    if (!next) { lastIndicator = null; setInd(null); return }
+    if (!lastIndicator) { lastIndicator = next; setInd(next); return }      // primera vez: sin animación
+    lastIndicator = next
+    // se pinta primero la posición anterior y en el siguiente cuadro se anima hacia la nueva
+    const r = requestAnimationFrame(() => requestAnimationFrame(() => { setSlide(true); setInd(next) }))
+    return () => cancelAnimationFrame(r)
+  }, [pathname, can])
+
+  useEffect(() => {
+    const onResize = () => {
+      const el = navRef.current?.querySelector<HTMLElement>('[aria-current="page"]')
+      if (el) { setSlide(false); const n = { left: el.offsetLeft, width: el.offsetWidth }; lastIndicator = n; setInd(n) }
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   return (
     <div className={`flex min-h-screen flex-col ${dark ? 'bg-slate-900 text-slate-100' : ''} print:hidden`}>
       <header className={`sticky top-0 z-30 border-b backdrop-blur-xl ${dark ? 'border-white/10 bg-slate-900/80' : 'border-white/70 bg-white/55'}`}>
@@ -32,13 +63,14 @@ export function AppShell({ children, dark = false, right }: { children: ReactNod
               {settings.name && settings.name !== APP_NAME && <div className="max-w-40 truncate text-[10px] text-slate-500">{settings.name}</div>}
             </div>
           </div>
-          <nav className="flex flex-1 gap-1 overflow-x-auto">
+          <nav ref={navRef} className="relative flex flex-1 gap-1 overflow-x-auto">
+            {ind && <span aria-hidden className="pointer-events-none absolute bottom-0 left-0 top-0 rounded-full bg-brand-600 shadow-[0_8px_16px_-8px_rgba(40,69,97,.7)]"
+              style={{ width: ind.width, transform: `translateX(${ind.left}px)`, transition: slide ? 'transform 320ms cubic-bezier(0.23,1,0.32,1), width 320ms cubic-bezier(0.23,1,0.32,1)' : 'none' }} />}
             {NAV.filter((n) => can(...n.perms)).map(({ to, label, icon: Icon }) => (
               <NavLink key={to} to={to}
                 className={({ isActive }) =>
-                  `flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
-                    isActive ? (dark ? 'bg-brand-600 text-white' : 'bg-brand-600 text-white shadow-[0_8px_16px_-8px_rgba(40,69,97,.7)]')
-                             : (dark ? 'text-slate-300 hover:bg-white/10' : 'text-slate-600 hover:bg-white/70')}`}>
+                  `relative z-10 flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-[color,background-color,transform] duration-150 active:scale-[.97] ${
+                    isActive ? 'text-white' : (dark ? 'text-slate-300 hover:bg-white/10' : 'text-slate-600 hover:bg-white/70')}`}>
                 <Icon size={16} /> {label}
               </NavLink>
             ))}
@@ -54,7 +86,7 @@ export function AppShell({ children, dark = false, right }: { children: ReactNod
           </div>
         </div>
       </header>
-      <main className="flex-1">{children}</main>
+      <main key={pathname} className="page-enter flex-1">{children}</main>
     </div>
   )
 }

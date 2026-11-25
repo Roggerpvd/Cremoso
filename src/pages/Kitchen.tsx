@@ -83,7 +83,7 @@ export default function Kitchen() {
                   const mins = minutesSince(o.created_at, now)
                   const late = (o.status === 'pending' || o.status === 'preparing') && mins >= 15
                   return (
-                    <article key={o.id} className={`rounded-xl bg-white p-4 text-slate-900 shadow ${late ? 'ring-4 ring-red-500' : ''}`}>
+                    <article key={o.id} className={`enter rounded-2xl bg-white p-4 text-slate-900 shadow ${late ? 'ring-4 ring-red-500' : ''}`}>
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="text-3xl font-extrabold leading-none">#{o.order_number}</div>

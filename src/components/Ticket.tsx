@@ -6,14 +6,7 @@ export interface TicketPayment { method: PaymentMethod; reference: string | null
 
 const CHANNEL = { internal: 'Caja/Salón', qr: 'QR' } as const
 
-/**
- * Ticket de consumo (80 mm) con TODOS los datos de la cuenta: negocio, mesa, pedidos, hora, canal, ítems con
- * observaciones, descuentos, impuesto, total y forma de pago.
- * kind = 'precuenta' → cuenta aún no pagada (no es comprobante).
- * kind = 'consumo'   → cuenta pagada.
- * Al pie, el ticket de consumo dice "Comprobante" (la pre-cuenta conserva su aviso de que aún no es un comprobante).
- * Ojo: este ticket lo genera el sistema; la boleta electrónica válida ante SUNAT es la que lleva serie-número (boletaRef).
- */
+
 export function Ticket({ settings: s, orders, kind, payment, boletaRef }: {
   settings: RestaurantSettings
   orders: Order[]

@@ -19,7 +19,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[100] flex flex-col items-center gap-2 px-4 print:hidden">
         {items.map((t) => (
           <div key={t.id}
-            className={`pointer-events-auto flex max-w-md items-start gap-2 rounded-lg px-4 py-3 text-sm text-white shadow-lg ${
+            className={`toast pointer-events-auto flex max-w-md items-start gap-2 rounded-2xl px-4 py-3 text-sm text-white shadow-[0_16px_32px_-12px_rgba(15,23,42,.45)] ${
               t.kind === 'error' ? 'bg-red-600' : t.kind === 'info' ? 'bg-slate-700' : 'bg-emerald-600'}`}>
             {t.kind === 'error' ? <AlertTriangle size={18} className="mt-0.5 shrink-0" /> : <Check size={18} className="mt-0.5 shrink-0" />}
             <span className="flex-1">{t.text}</span>

@@ -152,13 +152,13 @@ function NewOrder({ orders, editing, onDone, onCancelEdit }: {
           ))}
         </div>
         {shown.length === 0 ? <Empty text="No hay productos" /> : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+          <div className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
             {shown.map((p) => {
               const qty = lines.find((l) => l.product.id === p.id)?.quantity
               const img = imageUrl(p.image_path)
               return (
                 <button key={p.id} disabled={!p.is_available} onClick={() => add(p)}
-                  className={`card relative overflow-hidden text-left transition ${p.is_available ? 'hover:shadow-md active:scale-[.98]' : 'opacity-60'} ${qty ? 'ring-2 ring-brand-500' : ''}`}>
+                  className={`card relative overflow-hidden text-left ${p.is_available ? 'press' : 'opacity-60'} ${qty ? 'ring-2 ring-brand-500' : ''}`}>
                   {img && <img src={img} alt="" loading="lazy" className="h-24 w-full object-cover" />}
                   <div className="p-3">
                     <div className="text-sm font-semibold leading-tight">{p.name}</div>
@@ -195,7 +195,7 @@ function NewOrder({ orders, editing, onDone, onCancelEdit }: {
             <div className={`grid grid-cols-5 gap-1.5 sm:grid-cols-6 lg:grid-cols-5 ${noTable ? 'hidden' : ''}`}>
               {tables.map((t) => (
                 <button key={t.id} onClick={() => setTableId(t.id)} title={t.name ?? ''}
-                  className={`rounded-lg border py-2 text-sm font-semibold transition ${
+                  className={`press rounded-xl border py-2 text-sm font-semibold ${
                     tableId === t.id ? 'border-brand-600 bg-brand-600 text-white'
                       : occupied.has(t.id) ? 'border-brand-300 bg-brand-50 text-brand-700' : 'border-slate-300 bg-white hover:bg-slate-50'}`}>
                   {t.number}
@@ -261,7 +261,7 @@ function Accounts({ orders, reload, onEdit }: { orders: Order[]; reload: () => P
   }, [orders])
   if (!groups.length) return <Empty text="No hay cuentas abiertas. Los pedidos sin pagar aparecerán aquí agrupados por mesa (o solos, si son sin mesa)." />
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {groups.map((g) => <AccountCard key={g[0].table_id ?? `solo:${g[0].id}`} orders={g} reload={reload} onEdit={onEdit} />)}
     </div>
   )
