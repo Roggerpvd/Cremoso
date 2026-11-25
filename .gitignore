@@ -7,3 +7,5 @@ backups/
 supabase/.temp
 supabase/.branches
 supabase/tests/last_run.log
+
+.wrangler/
