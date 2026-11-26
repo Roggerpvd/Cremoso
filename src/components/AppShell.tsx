@@ -4,6 +4,7 @@ import { BarChart3, BookOpen, ChefHat, ListChecks, LogOut, QrCode, ReceiptText, 
 import { useAuth } from '../auth/AuthProvider'
 import { useSettings } from '../lib/settings'
 import { APP_NAME } from '../lib/brand'
+import { enableStaffInstall } from '../lib/pwa'
 import { Logo } from './ui'
 
 const NAV = [
@@ -21,10 +22,11 @@ const NAV = [
 // Posición del indicador de la página anterior: al cambiar de pantalla el indicador DESLIZA desde allí
 let lastIndicator: { left: number; width: number } | null = null
 
-export function AppShell({ children, dark = false, right }: { children: ReactNode; dark?: boolean; right?: ReactNode }) {
+export function AppShell({ children, dark = false, plain = false, right }: { children: ReactNode; dark?: boolean; plain?: boolean; right?: ReactNode }) {
   const { profile, can, signOut } = useAuth()
   const { settings } = useSettings()
   const { pathname } = useLocation()
+  useEffect(() => { enableStaffInstall() }, [])
   const navRef = useRef<HTMLElement>(null)
   const [ind, setInd] = useState<{ left: number; width: number } | null>(lastIndicator)
   const [slide, setSlide] = useState(false)
@@ -53,7 +55,7 @@ export function AppShell({ children, dark = false, right }: { children: ReactNod
   }, [])
 
   return (
-    <div className={`flex min-h-screen flex-col ${dark ? 'bg-slate-900 text-slate-100' : ''} print:hidden`}>
+    <div className={`flex min-h-screen flex-col ${dark ? 'bg-slate-900 text-slate-100' : plain ? 'bg-white' : ''} print:hidden`}>
       <header className={`sticky top-0 z-30 border-b backdrop-blur-xl ${dark ? 'border-white/10 bg-slate-900/80' : 'border-white/70 bg-white/55'}`}>
         <div className="flex items-center gap-3 px-3 py-2.5 sm:px-5">
           <div className="hidden items-center gap-2 sm:flex" title={settings.name}>

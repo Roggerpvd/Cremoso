@@ -7,7 +7,7 @@ import { useSettings } from '../lib/settings'
 import { supabase } from '../lib/supabase'
 import { q } from '../lib/api'
 import { errorCode, errorMessage } from '../lib/errors'
-import { imageUrl, removeProductImage, uploadProductImage } from '../lib/image'
+import { imageUrl, isLocalImage, listLocalImages, LOCAL_IMAGE_DIR, removeProductImage, uploadProductImage } from '../lib/image'
 import type { Category, Product, Promotion } from '../lib/types'
 
 type Tab = 'products' | 'categories' | 'promotions'
@@ -172,6 +172,10 @@ function ProductForm({ initial, cats, onClose, onSaved }: { initial: Partial<Pro
   const [preview, setPreview] = useState<string | null>(imageUrl(initial.image_path))
   const [removeImg, setRemoveImg] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [local, setLocal] = useState<string[] | null>(null)   // galería de public/images/menu (null = oculta)
+  const [pick, setPick] = useState<string | null>(null)       // archivo elegido de la galería
+
+  async function openGallery() { setLocal(await listLocalImages()) }
 
   async function save() {
     if (!p.name?.trim()) return toast('El nombre es obligatorio', 'error')
@@ -183,6 +187,7 @@ function ProductForm({ initial, cats, onClose, onSaved }: { initial: Partial<Pro
       let image_path = p.image_path ?? null
       const old = image_path
       if (file) image_path = await uploadProductImage(file)
+      else if (pick) image_path = `${LOCAL_IMAGE_DIR}/${pick}`
       else if (removeImg) image_path = null
       const row = {
         category_id: p.category_id, name: p.name.trim(), description: p.description?.trim() || null,
@@ -215,10 +220,28 @@ function ProductForm({ initial, cats, onClose, onSaved }: { initial: Partial<Pro
           <div className="flex items-center gap-3">
             {preview && !removeImg ? <img src={preview} alt="" className="h-20 w-20 rounded-lg object-cover" /> : <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-slate-100 text-slate-300"><ImagePlus /></div>}
             <div className="space-y-1">
-              <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setFile(f); setRemoveImg(false); setPreview(URL.createObjectURL(f)) } }} className="text-sm" />
-              {(preview || p.image_path) && !removeImg && <button type="button" className="btn btn-ghost btn-sm text-red-600" onClick={() => { setRemoveImg(true); setFile(null) }}>Quitar foto</button>}
+              <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setFile(f); setPick(null); setRemoveImg(false); setPreview(URL.createObjectURL(f)) } }} className="text-sm" />
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => (local ? setLocal(null) : void openGallery())}>Elegir de la carpeta del sistema</button>
+              {(preview || p.image_path) && !removeImg && <button type="button" className="btn btn-ghost btn-sm text-red-600" onClick={() => { setRemoveImg(true); setFile(null); setPick(null) }}>Quitar foto</button>}
             </div>
           </div>
+          {local && (
+            <div className="mt-3 rounded-2xl border border-slate-200/80 bg-white/70 p-3">
+              {local.length === 0 ? (
+                <p className="text-sm text-slate-500">No hay imágenes en <code>public{LOCAL_IMAGE_DIR}</code>. Copia tus fotos en esa carpeta del proyecto, reinicia <code>npm run dev</code> (o vuelve a publicar) y aparecerán aquí.</p>
+              ) : (
+                <div className="grid max-h-56 grid-cols-4 gap-2 overflow-y-auto sm:grid-cols-6">
+                  {local.map((name) => (
+                    <button key={name} type="button" title={name} onClick={() => { setPick(name); setFile(null); setRemoveImg(false); setPreview(`${LOCAL_IMAGE_DIR}/${name}`); setLocal(null) }}
+                      className={`press overflow-hidden rounded-xl border bg-white ${pick === name || p.image_path === `${LOCAL_IMAGE_DIR}/${name}` ? 'border-brand-600 ring-2 ring-brand-300' : 'border-slate-200'}`}>
+                      <img src={`${LOCAL_IMAGE_DIR}/${name}`} alt={name} loading="lazy" className="aspect-square w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {isLocalImage(p.image_path) && !pick && !file && !removeImg && <p className="mt-1 text-xs text-slate-500">Imagen actual: {p.image_path}</p>}
         </div>
         <Toggle checked={p.is_available ?? true} onChange={(v) => setP({ ...p, is_available: v })} label="Disponible (apágalo si está agotado)" />
         <Toggle checked={p.is_active ?? true} onChange={(v) => setP({ ...p, is_active: v })} label="En la carta (apágalo para retirarlo)" />

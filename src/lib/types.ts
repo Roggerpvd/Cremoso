@@ -22,6 +22,8 @@ export interface RestaurantSettings {
   timezone: string
   qr_ordering_enabled: boolean
   qr_max_pending_per_table: number
+  qr_session_minutes: number            // 0 = sin sesiones
+  qr_requires_confirmation: boolean     // los pedidos del QR esperan a Caja
   public_base_url: string | null
   receipt_footer: string | null
   legal_name: string | null
@@ -103,6 +105,7 @@ export interface Order {
   id: string
   order_number: number
   table_id: string | null   // null = pedido sin mesa (para llevar / mostrador)
+  is_confirmed: boolean     // false = pedido del QR que Caja aún no aceptó
   channel: OrderChannel
   status: OrderStatus
   payment_status: PaymentStatus
@@ -150,6 +153,8 @@ export interface TableInfo {
   restaurant: string
   currency: string
   qr_enabled: boolean
+  session_id: string | null
+  requires_confirmation: boolean
 }
 
 export interface PublicOrder {
@@ -159,6 +164,7 @@ export interface PublicOrder {
   total: number
   created_at: string
   channel: OrderChannel
+  is_confirmed: boolean
   items: { name: string; quantity: number; notes: string | null }[]
 }
 

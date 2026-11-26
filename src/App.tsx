@@ -37,6 +37,8 @@ export default function App() {
         <AuthProvider>
           <Routes>
             <Route path="/m/:token" element={<QrMenu />} />
+            <Route path="/m" element={<QrMenu />} />
+            <Route path="/menu" element={<QrMenu readOnly />} />
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<RequireAuth><Home /></RequireAuth>} />
             <Route path="/caja" element={guard(['orders.create', 'payments.register'], <Pos />)} />

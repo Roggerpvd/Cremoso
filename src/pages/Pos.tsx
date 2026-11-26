@@ -13,12 +13,15 @@ import { supabase } from '../lib/supabase'
 import { api, q } from '../lib/api'
 import { errorCode, errorMessage } from '../lib/errors'
 import { imageUrl } from '../lib/image'
-import { tableLabel, uuid } from '../lib/util'
+import { beep, tableLabel, uuid } from '../lib/util'
 import { METHOD_LABEL, type CartLine, type MenuProduct, type Order, type PaymentMethod, type TableRow } from '../lib/types'
 
 export default function Pos() {
   const { can } = useAuth()
-  const ord = useOrders()
+  const toast = useToast()
+  const ord = useOrders({
+    onAwaiting: (o) => { beep(2); toast(`Pedido #${o.order_number} del QR por confirmar · ${tableLabel(o.tables)}`, 'info') },
+  })
   const [tab, setTab] = useState<'new' | 'accounts'>(can('orders.create') ? 'new' : 'accounts')
   const [editing, setEditing] = useState<Order | null>(null)
   const unpaid = ord.orders.filter((o) => o.payment_status === 'unpaid')
@@ -36,6 +39,7 @@ export default function Pos() {
             Cuentas {unpaid.length > 0 && <span className="rounded-full bg-black/20 px-1.5 text-xs">{unpaid.length}</span>}
           </button>
         </div>
+        {can('orders.create') && ord.awaiting.length > 0 && <AwaitingPanel orders={ord.awaiting} reload={ord.reload} />}
         {tab === 'new' && can('orders.create')
           ? <NewOrder orders={ord.orders} editing={editing} onDone={() => { setEditing(null); void ord.reload() }} onCancelEdit={() => setEditing(null)} />
           : ord.loading ? <Loading /> : ord.error ? <ErrorBox text={ord.error} onRetry={ord.reload} />
@@ -353,5 +357,51 @@ function AccountCard({ orders, reload, onEdit }: { orders: Order[]; reload: () =
         </div>
       )}
     </div>
+  )
+}
+
+
+/* ------------------------------------------------------------------ */
+/** Pedidos hechos por el cliente desde el QR: no llegan a cocina hasta que Caja los acepta. */
+function AwaitingPanel({ orders, reload }: { orders: Order[]; reload: () => void }) {
+  const { fmt } = useSettings()
+  const toast = useToast()
+  const [busy, setBusy] = useState<Set<string>>(new Set())
+  async function act(o: Order, kind: 'ok' | 'no') {
+    if (kind === 'no' && !window.confirm(`¿Rechazar el pedido #${o.order_number} de ${tableLabel(o.tables)}? No llegará a cocina.`)) return
+    setBusy((b) => new Set(b).add(o.id))
+    try {
+      if (kind === 'ok') await api.confirmQrOrder(o.id); else await api.rejectQrOrder(o.id)
+      toast(kind === 'ok' ? `Pedido #${o.order_number} enviado a cocina` : `Pedido #${o.order_number} rechazado`)
+      reload()
+    } catch (e) { toast(errorMessage(e), 'error') }
+    finally { setBusy((b) => { const n = new Set(b); n.delete(o.id); return n }) }
+  }
+  return (
+    <section className="card mb-4 border-amber-300/70 p-4" aria-label="Pedidos del QR por confirmar">
+      <h2 className="flex items-center gap-2 text-base font-semibold">
+        <span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-60" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" /></span>
+        Por confirmar ({orders.length})
+      </h2>
+      <p className="text-xs text-slate-500">Pedidos hechos desde el celular de un cliente. Confirma solo si hay alguien en esa mesa: recién ahí llegan a cocina.</p>
+      <ul className="stagger mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {orders.map((o) => (
+          <li key={o.id} className="rounded-2xl border border-slate-200/80 bg-white/80 p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div><div className="font-bold">#{o.order_number} · {tableLabel(o.tables)}</div><div className="text-xs text-slate-500">{new Date(o.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</div></div>
+              <div className="font-semibold">{fmt(o.total)}</div>
+            </div>
+            <ul className="mt-2 text-sm text-slate-600">
+              {o.order_items.slice().sort((a, b) => a.line_no - b.line_no).map((it) => <li key={it.id}>{it.quantity}× {it.product_name}{it.notes && <span className="text-amber-700"> ({it.notes})</span>}</li>)}
+            </ul>
+            {o.customer_note && <p className="mt-1 rounded bg-amber-50 px-2 py-1 text-xs text-amber-900">{o.customer_note}</p>}
+            <div className="mt-3 flex gap-2">
+              <button className="btn btn-primary btn-sm flex-1" disabled={busy.has(o.id)} onClick={() => act(o, 'ok')}>Aceptar</button>
+              <button className="btn btn-secondary btn-sm" disabled={busy.has(o.id)} onClick={() => act(o, 'no')}>Rechazar</button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }

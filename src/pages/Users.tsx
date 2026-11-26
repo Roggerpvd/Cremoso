@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { KeyRound, Pencil, Plus, Save, Trash2, UserPlus } from 'lucide-react'
+import { KeyRound, Pencil, Plus, Save, Trash2, UserMinus, UserPlus } from 'lucide-react'
 import { AppShell } from '../components/AppShell'
 import { ErrorBox, Loading, Modal, Spinner, Toggle } from '../components/ui'
 import { useToast } from '../components/Toast'
@@ -73,6 +73,13 @@ export default function Users() {
     catch (e) { toast(errorMessage(e), 'error') }
   }
 
+  async function removeUser(u: StaffUser) {
+    const name = u.full_name || emailToUsername(u.email)
+    if (!window.confirm(`¿Eliminar a “${name}”?\n\nSu cuenta se borra y ya no podrá entrar. Los pedidos, cobros y boletas que registró se conservan. Si solo quieres que no entre por un tiempo, usa el interruptor «Activo».`)) return
+    try { await api.deleteStaffUser(u.id); toast(`Usuario “${name}” eliminado`); await load() }
+    catch (e) { toast(errorMessage(e), 'error') }
+  }
+
   async function removeRole(r: Role) {
     if (!window.confirm(`¿Eliminar el puesto “${r.label}”?`)) return
     try { await api.deleteRole(r.id); toast('Puesto eliminado'); await load() }
@@ -112,6 +119,7 @@ export default function Users() {
                       <Toggle checked={d.is_active} onChange={(v) => set(u, { is_active: v })} label="Activo" />
                       <button className="btn btn-secondary btn-sm" onClick={() => resetPassword(u)} title="Cambiar contraseña"><KeyRound size={14} /> Contraseña</button>
                       <button className="btn btn-primary btn-sm" disabled={!dirty} onClick={() => save(u)}><Save size={14} /> Guardar</button>
+                      {u.id !== profile?.id && <button className="btn btn-ghost btn-sm !px-2 text-red-600" onClick={() => removeUser(u)} title="Eliminar usuario" aria-label={`Eliminar a ${u.full_name || emailToUsername(u.email)}`}><UserMinus size={15} /></button>}
                     </div>
                   )
                 })}

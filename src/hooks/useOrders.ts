@@ -8,7 +8,8 @@ export type Conn = 'connecting' | 'online' | 'offline'
 const SELECT = '*, order_items(*), tables(number,name)'
 
 interface Options {
-  onNew?: (o: Order) => void        // llegó un pedido pendiente nuevo (para el sonido de cocina)
+  onNew?: (o: Order) => void        // llegó un pedido pendiente nuevo YA CONFIRMADO (para el sonido de cocina)
+  onAwaiting?: (o: Order) => void   // llegó un pedido del QR que espera confirmación de Caja
   onCancelled?: (o: Order) => void  // un pedido visible fue cancelado
 }
 
@@ -20,6 +21,7 @@ interface Options {
  */
 export function useOrders(opts: Options = {}) {
   const [orders, setOrders] = useState<Order[]>([])
+  const [awaiting, setAwaiting] = useState<Order[]>([])
   const [conn, setConn] = useState<Conn>('connecting')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -31,7 +33,9 @@ export function useOrders(opts: Options = {}) {
   const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const publish = useCallback(() => {
-    setOrders([...map.current.values()].sort((a, b) => a.created_at.localeCompare(b.created_at)))
+    const all = [...map.current.values()].sort((a, b) => a.created_at.localeCompare(b.created_at))
+    setOrders(all.filter((o) => o.is_confirmed !== false))    // cocina, cuentas y seguimiento solo ven pedidos confirmados
+    setAwaiting(all.filter((o) => o.is_confirmed === false))  // Caja los acepta o rechaza
   }, [])
 
   const merge = useCallback((incoming: Order[], replaceAll: boolean) => {
@@ -41,10 +45,12 @@ export function useOrders(opts: Options = {}) {
       const old = prev.get(o.id)
       if (o.status === 'cancelled') {
         next.delete(o.id)
-        if (old && old.status !== 'cancelled') cb.current.onCancelled?.(o)
+        if (old && old.status !== 'cancelled' && old.is_confirmed !== false) cb.current.onCancelled?.(o)
         continue
       }
-      if (ready.current && !old && o.status === 'pending') cb.current.onNew?.(o)
+      const wasVisible = !!old && old.is_confirmed !== false
+      if (ready.current && o.status === 'pending' && o.is_confirmed !== false && !wasVisible) cb.current.onNew?.(o)
+      if (ready.current && o.status === 'pending' && o.is_confirmed === false && !old) cb.current.onAwaiting?.(o)
       next.set(o.id, o)
     }
     map.current = next
@@ -121,5 +127,5 @@ export function useOrders(opts: Options = {}) {
     }
   }, [load, publish])
 
-  return { orders, conn, loading, error, reload: load, changeStatus }
+  return { orders, awaiting, conn, loading, error, reload: load, changeStatus }
 }

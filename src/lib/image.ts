@@ -41,13 +41,27 @@ export async function uploadProductImage(file: File): Promise<string> {
   return path
 }
 
+/** Carpeta de imágenes que viaja con el sistema (public/images/menu). Sus archivos se publican tal cual. */
+export const LOCAL_IMAGE_DIR = '/images/menu'
+export const isLocalImage = (path: string | null | undefined) => !!path && path.startsWith('/')
+
+/** Nombres de archivo de public/images/menu (la lista la genera scripts/gen-image-index.mjs). */
+export async function listLocalImages(): Promise<string[]> {
+  try {
+    const r = await fetch(`${LOCAL_IMAGE_DIR}/index.json`, { cache: 'no-cache' })
+    if (!r.ok) return []
+    const j = await r.json()
+    return Array.isArray(j) ? j.filter((x): x is string => typeof x === 'string') : []
+  } catch { return [] }
+}
+
 export async function removeProductImage(path: string | null | undefined) {
-  if (!path || path.startsWith('http')) return
+  if (!path || path.startsWith('http') || isLocalImage(path)) return   // solo se borran las subidas a Supabase Storage
   await supabase.storage.from(STORAGE_BUCKET).remove([path]) // mejor esfuerzo
 }
 
 export function imageUrl(path: string | null | undefined): string | null {
   if (!path) return null
-  if (path.startsWith('http')) return path
+  if (path.startsWith('http') || isLocalImage(path)) return path   // URL externa o archivo de public/images/menu
   return supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl
 }

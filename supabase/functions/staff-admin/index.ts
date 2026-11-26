@@ -84,5 +84,17 @@ Deno.serve(async (req) => {
     return json({ user_id: userId })
   }
 
+  if (body.action === 'delete') {
+    const userId = String(body.user_id ?? '')
+    if (!userId) return json({ error: 'INVALID_REQUEST' }, 400)
+    // Reglas (no borrarse a sí mismo, no dejar el sistema sin administrador): se validan en la base de datos con el JWT de quien llama
+    const { error: ruleErr } = await caller.rpc('admin_check_delete_user', { p_user_id: userId })
+    if (ruleErr) return json({ error: String(ruleErr.message).trim() }, 400)
+    // Al borrar la cuenta de Auth se borra su perfil; los pedidos, cobros y boletas que registró se conservan (autor en blanco).
+    const { error } = await admin.auth.admin.deleteUser(userId)
+    if (error) return json({ error: 'DELETE_FAILED', detail: error.message }, 400)
+    return json({ user_id: userId })
+  }
+
   return json({ error: 'INVALID_REQUEST' }, 400)
 })

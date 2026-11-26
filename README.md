@@ -24,7 +24,7 @@ Sistema real (no maqueta) de gestión de pedidos: caja/POS, carta digital, QR po
 ## Puesta en marcha (nube gratuita)
 
 1. **Crea un proyecto en Supabase** (plan Free) en <https://supabase.com>.
-2. **Base de datos:** en *SQL Editor* pega y ejecuta `supabase/schema_completo.sql` (todo en uno: tablas, índices, RLS, funciones, bucket de fotos y boletas). Si ya tenías el sistema instalado, ejecuta solo lo que te falte: `supabase/migrations/20260102000000_receipts.sql` (boletas) y `supabase/migrations/20260103000000_notable_roles.sql` (pedidos sin mesa y puestos administrables; se puede ejecutar más de una vez sin problema). Opcional: `supabase/seed_demo.sql` para una carta y 8 mesas de ejemplo.
+2. **Base de datos:** en *SQL Editor* pega y ejecuta `supabase/schema_completo.sql` (todo en uno: tablas, índices, RLS, funciones, bucket de fotos y boletas). Si ya tenías el sistema instalado, ejecuta solo lo que te falte: `supabase/migrations/20260102000000_receipts.sql` (boletas), `supabase/migrations/20260103000000_notable_roles.sql` (pedidos sin mesa y puestos administrables) y `supabase/migrations/20260104000000_qr_seguridad_y_personal.sql` (QR seguro: sesiones y confirmación del personal; eliminar personal). Las dos últimas se pueden ejecutar más de una vez sin problema. Después vuelve a publicar la función `staff-admin` (`npx supabase functions deploy staff-admin`): ahora también da de baja usuarios. Opcional: `supabase/seed_demo.sql` para una carta y 8 mesas de ejemplo.
 3. **Desactiva el registro público:** *Authentication → Sign In / Providers → desactiva "Allow new users to sign up"*. Así solo tú creas cuentas.
 4. **Crea tu primer usuario** (queda como **administrador** automáticamente): *Authentication → Users → Add user → Create new user* (marca "Auto Confirm"). Los siguientes usuarios no reciben rol hasta que el admin se lo asigne en `/usuarios`.
 5. **Configura la app:** copia *Project URL* y la clave *anon/publishable* (*Project Settings → API*) en `public/config.js` (o en `.env` para desarrollo). **Nunca** pongas la `service_role` ahí.
@@ -36,6 +36,12 @@ Sistema real (no maqueta) de gestión de pedidos: caja/POS, carta digital, QR po
    ```
 7. **Despliega `dist/`** en Cloudflare Pages (recomendado: ancho de banda ilimitado en Free) o Netlify (créditos mensuales). Para Netlify ya existe `netlify.toml`; para Cloudflare (Workers con archivos estáticos) ya existe `wrangler.jsonc`, que sirve `index.html` en rutas como `/caja`. **No agregues `public/_redirects` en Cloudflare:** provoca el error «Infinite loop detected». **No uses Vercel Hobby:** es solo para uso no comercial.
 8. Entra a `/ajustes` y pon la **URL base pública** (la del sitio desplegado) y luego imprime los QR desde `/mesas`.
+
+### QR de mesa seguro
+El cliente que escanea el QR no puede instalar la app, el token no queda en la dirección del celular, la sesión vence y los pedidos esperan la confirmación de Caja antes de llegar a cocina. Detalle y límites en `docs/QR_SEGURIDAD.md`.
+
+### Imágenes de la carta desde la carpeta `public`
+Copia las fotos en `public/images/menu/` y elígelas en **Carta → Editar producto → Elegir de la carpeta del sistema**. Instrucciones en `public/images/menu/LEEME.txt`.
 
 ### Diseño y movimiento
 Tema azul acero, calendario propio y animaciones cortas y suaves. Criterios y valores en `docs/DISENO.md`.
@@ -62,7 +68,7 @@ Ver `docs/INSTALACION_LOCAL.md` (Supabase CLI + Docker + una PC en el local).
 
 ## Pruebas
 ```bash
-npm run test:db                                  # 150 pruebas SQL + 42 de boletas + 36 de pedidos sin mesa/puestos + concurrencia (PostgreSQL local temporal)
+npm run test:db                                  # 150 pruebas SQL + 42 de boletas + 36 de pedidos sin mesa/puestos + 43 de QR seguro/baja de personal + concurrencia (PostgreSQL local temporal)
 npm run build && python3 tests/ui-smoke/smoke.py # prueba de humo de la interfaz en Chrome con servidor simulado
 ```
 Detalle en `docs/PRUEBAS.md`.

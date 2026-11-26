@@ -1,0 +1,14 @@
+IMÁGENES DE LA CARTA
+====================
+Copia aquí las fotos de tus productos (jpg, png, webp, avif, gif o svg).
+
+  1. Pon el archivo en esta carpeta:   public/images/menu/
+     (nombre sin espacios ni tildes, p. ej.:  jugo-de-mango.webp)
+  2. Reinicia `npm run dev` o vuelve a subir el proyecto: la lista se actualiza sola.
+  3. En el sistema: Carta → Editar producto → «Elegir de la carpeta del sistema».
+
+Cada imagen queda disponible en la dirección /images/menu/NOMBRE (por ejemplo /images/menu/jugo-de-mango.webp).
+Consejo: usa fotos de unos 640 px de lado y menos de 150 KB. Si cambias una foto, cámbiale también el nombre
+(el navegador guarda las imágenes en caché y podría seguir mostrando la anterior).
+
+No guardes aquí nada privado: todo lo que está en la carpeta `public` es visible para cualquiera con el enlace.

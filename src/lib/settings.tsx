@@ -6,6 +6,7 @@ import type { RestaurantSettings } from './types'
 const DEFAULTS: RestaurantSettings = {
   id: 1, name: 'Restaurante', currency_symbol: 'S/', tax_rate: 0.18, prices_include_tax: true,
   timezone: 'America/Lima', qr_ordering_enabled: true, qr_max_pending_per_table: 3,
+  qr_session_minutes: 180, qr_requires_confirmation: true,
   public_base_url: null, receipt_footer: null, legal_name: null, ruc: null, address: null, phone: null,
 }
 

@@ -19,8 +19,22 @@ const CUSTOMER_STATUS: Record<OrderStatus, { text: string; cls: string }> = {
   cancelled: { text: 'Cancelado', cls: 'bg-red-100 text-red-700' },
 }
 
-export default function QrMenu() {
-  const { token = '' } = useParams()
+const AWAITING = { text: 'Esperando que el personal lo confirme', cls: 'bg-amber-100 text-amber-800' }
+
+// El token del QR vive solo en ESTA pestaña (sessionStorage): se quita de la dirección para que no quede en el historial,
+// en marcadores ni en accesos directos. Para volver a pedir hay que escanear el QR de nuevo.
+const ss = {
+  get: (k: string) => { try { return sessionStorage.getItem(k) } catch { return null } },
+  set: (k: string, v: string) => { try { sessionStorage.setItem(k, v) } catch { /* modo privado */ } },
+  del: (k: string) => { try { sessionStorage.removeItem(k) } catch { /* nada */ } },
+}
+const SCAN_MSG = 'Escanea el código QR de tu mesa con la cámara del celular para ver la carta y pedir.'
+
+export default function QrMenu({ readOnly = false }: { readOnly?: boolean }) {
+  const { token: urlToken } = useParams()
+  const [token] = useState(() => (readOnly ? '' : urlToken || ss.get('qr:token') || ''))
+  const session = useRef<string | null>(readOnly ? null : ss.get('qr:session'))
+  const [ended, setEnded] = useState(false)   // sesión vencida o cerrada: hay que escanear de nuevo
   const [info, setInfo] = useState<TableInfo | null>(null)
   const [fatal, setFatal] = useState('')
   const [cats, setCats] = useState<Category[]>([])
@@ -32,9 +46,9 @@ export default function QrMenu() {
   const [orders, setOrders] = useState<PublicOrder[]>([])
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
-  const [justSent, setJustSent] = useState<number | null>(null)
+  const [justSent, setJustSent] = useState<{ n: number; awaiting: boolean } | null>(null)
 
-  const storeKey = `cart:${token}`
+  const storeKey = `cart:${token || 'carta'}`
   const [cart, setCartState] = useState<Record<string, { q: number; n: string }>>({})
   const [note, setNoteState] = useState('')
   const rid = useRef(uuid())
@@ -42,12 +56,12 @@ export default function QrMenu() {
   // Carrito persistente (si recarga la página no pierde lo elegido)
   useEffect(() => {
     try {
-      const s: StoredCart | null = JSON.parse(localStorage.getItem(storeKey) ?? 'null')
+      const s: StoredCart | null = JSON.parse(ss.get(storeKey) ?? 'null')
       if (s) { setCartState(Object.fromEntries(s.lines.map((l) => [l.id, { q: l.q, n: l.n }]))); setNoteState(s.note); rid.current = s.rid }
     } catch { /* ignorar */ }
   }, [storeKey])
   const persist = useCallback((c: typeof cart, n: string) => {
-    try { localStorage.setItem(storeKey, JSON.stringify({ lines: Object.entries(c).map(([id, v]) => ({ id, q: v.q, n: v.n })), note: n, rid: rid.current } satisfies StoredCart)) } catch { /* modo privado */ }
+    try { sessionStorage.setItem(storeKey, JSON.stringify({ lines: Object.entries(c).map(([id, v]) => ({ id, q: v.q, n: v.n })), note: n, rid: rid.current } satisfies StoredCart)) } catch { /* modo privado */ }
   }, [storeKey])
   // Cualquier cambio de contenido genera una clave nueva; reintentar SIN cambios reutiliza la misma (anti-duplicados)
   const setCart = (fn: (c: typeof cart) => typeof cart) => setCartState((c) => { const n = fn(c); rid.current = uuid(); persist(n, note); return n })
@@ -62,26 +76,54 @@ export default function QrMenu() {
     if (!p.error) setProds((p.data as MenuProduct[]).map((x) => ({ ...x, price: Number(x.price), final_price: Number(x.final_price) })))
   }, [])
 
-  const loadOrders = useCallback(async () => {
-    try { setOrders(await api.tableOrders(token)) } catch { /* se reintenta con el siguiente ciclo */ }
+  // Sesión vencida o cerrada (por tiempo, por pago de la cuenta o porque se cambió el QR): se olvida todo y se pide escanear
+  const endSession = useCallback(() => {
+    ss.del('qr:token'); ss.del('qr:session'); ss.del(`cart:${token}`)
+    session.current = null
+    setEnded(true)
   }, [token])
+  const loadOrders = useCallback(async () => {
+    try { setOrders(await api.tableOrders(token, session.current)) }
+    catch (e) { if (['SESSION_EXPIRED', 'SESSION_REQUIRED', 'INVALID_TABLE'].includes(errorCode(e) ?? '')) endSession() /* otros errores: se reintenta */ }
+  }, [token, endSession])
 
   useEffect(() => {
     let alive = true
     ;(async () => {
       try {
-        const t = await api.tableByToken(token)
-        if (!alive) return
-        setInfo(t)
-        document.title = `${t.restaurant} · Mesa ${t.number}`
-        await Promise.all([loadMenu(), loadOrders()])
+        if (readOnly) {
+          const p = await api.publicInfo()
+          if (!alive) return
+          setInfo({ number: 0, name: null, restaurant: p.restaurant, currency: p.currency, qr_enabled: false, session_id: null, requires_confirmation: false })
+          document.title = `${p.restaurant} · Carta`
+          await loadMenu()
+        } else if (!token) {
+          setFatal(SCAN_MSG)
+        } else {
+          const t = await api.openTableSession(token, session.current)
+          if (!alive) return
+          session.current = t.session_id
+          ss.set('qr:token', token)
+          if (t.session_id) ss.set('qr:session', t.session_id); else ss.del('qr:session')
+          if (urlToken) window.history.replaceState(null, '', '/m')   // el token ya no queda en la dirección
+          setInfo(t)
+          document.title = `${t.restaurant} · Mesa ${t.number}`
+          await Promise.all([loadMenu(), loadOrders()])
+        }
       } catch (e) {
         if (alive) setFatal(errorCode(e) === 'INVALID_TABLE' ? 'Este código QR no es válido o la mesa está desactivada. Pide ayuda al personal.' : errorMessage(e))
       }
       if (alive) setLoading(false)
     })()
     return () => { alive = false }
-  }, [token, loadMenu, loadOrders])
+  }, [token, urlToken, readOnly, loadMenu, loadOrders])
+
+  // Estas páginas no deben indexarse ni instalarse como app (la app instalable es solo para el personal)
+  useEffect(() => {
+    const m = document.createElement('meta'); m.name = 'robots'; m.content = 'noindex,nofollow'
+    document.head.appendChild(m)
+    return () => { m.remove() }
+  }, [])
 
   // Estado de los pedidos: sondeo ligero cada 15 s solo con la pestaña visible (no consume conexiones Realtime)
   useEffect(() => {
@@ -97,7 +139,7 @@ export default function QrMenu() {
   const count = lines.reduce((s, l) => s + l.q, 0)
   const total = lines.reduce((s, l) => s + l.q * l.p.final_price, 0)
   const bad = lines.filter((l) => !l.p.is_available)
-  const canOrder = info?.qr_enabled ?? false
+  const canOrder = !readOnly && !ended && (info?.qr_enabled ?? false)
   const shown = prods.filter((p) => cat === 'all' || p.category_id === cat)
 
   const setQty = (id: string, d: number) => setCart((c) => {
@@ -113,18 +155,30 @@ export default function QrMenu() {
     if (!lines.length || bad.length) return
     setSending(true); setError('')
     try {
-      const r = await api.createQrOrder(token, lines.map((l) => ({ product_id: l.p.id, quantity: l.q, notes: l.n.trim() || undefined })), rid.current, note.trim() || undefined)
+      const r = await api.createQrOrder(token, session.current, lines.map((l) => ({ product_id: l.p.id, quantity: l.q, notes: l.n.trim() || undefined })), rid.current, note.trim() || undefined)
       setCartState({}); setNoteState(''); rid.current = uuid()
-      try { localStorage.removeItem(storeKey) } catch { /* nada */ }
-      setSheet(false); setJustSent(r.order_number); setView('orders'); void loadOrders()
+      ss.del(storeKey)
+      setSheet(false); setJustSent({ n: r.order_number, awaiting: r.awaiting_confirmation }); setView('orders'); void loadOrders()
     } catch (e) {
       if (errorCode(e) === 'PRODUCT_UNAVAILABLE') void loadMenu()
+      if (['SESSION_EXPIRED', 'SESSION_REQUIRED'].includes(errorCode(e) ?? '')) { setSheet(false); endSession(); return }
       setError(errorMessage(e)) // el carrito se conserva; reintentar es seguro
     } finally { setSending(false) }
   }
 
   if (loading) return <Loading />
-  if (fatal || !info) return <div className="flex min-h-screen items-center justify-center p-6 text-center text-slate-600">{fatal || 'No se pudo cargar la carta.'}</div>
+  if (ended) return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center text-slate-600">
+      <p className="max-w-sm">Tu sesión terminó (por tiempo o porque se pagó la cuenta). Escanea de nuevo el código QR de tu mesa para seguir pidiendo.</p>
+      <a href="/menu" className="btn btn-secondary">Ver solo la carta</a>
+    </div>
+  )
+  if (fatal || !info) return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center text-slate-600">
+      <p className="max-w-sm">{fatal || 'No se pudo cargar la carta.'}</p>
+      {!readOnly && <a href="/menu" className="btn btn-secondary">Ver solo la carta</a>}
+    </div>
+  )
 
   const myTotal = orders.filter((o) => o.status !== 'cancelled').reduce((s, o) => s + o.total, 0)
 
@@ -133,13 +187,13 @@ export default function QrMenu() {
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="flex items-center justify-between px-4 py-3">
           <h1 className="text-lg font-bold">{info.restaurant}</h1>
-          <span className="rounded-full bg-brand-600 px-3 py-1 text-sm font-semibold text-white">Mesa {info.number}</span>
+          {!readOnly && <span className="rounded-full bg-brand-600 px-3 py-1 text-sm font-semibold text-white">Mesa {info.number}</span>}
         </div>
-        <div className="flex border-t border-slate-100">
+        {!readOnly && <div className="flex border-t border-slate-100">
           {([['menu', 'Carta', ChefHat], ['orders', `Mis pedidos${orders.length ? ` (${orders.length})` : ''}`, ClipboardList]] as const).map(([k, l, Icon]) => (
             <button key={k} onClick={() => setView(k)} className={`flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm font-medium ${view === k ? 'border-b-2 border-brand-600 text-brand-700' : 'text-slate-500'}`}><Icon size={16} />{l}</button>
           ))}
-        </div>
+        </div>}
         {view === 'menu' && (
           <div className="flex gap-2 overflow-x-auto px-4 py-2">
             <button className={`chip ${cat === 'all' ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300'}`} onClick={() => setCat('all')}>Todo</button>
@@ -150,7 +204,7 @@ export default function QrMenu() {
 
       {view === 'menu' ? (
         <main>
-          {!canOrder && <p className="m-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Los pedidos desde el celular están desactivados por ahora. Puedes ver la carta y pedirle al mozo.</p>}
+          {!canOrder && <p className="m-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{readOnly ? 'Esta es la carta para ver. Para pedir, escanea el código QR de tu mesa o pídele al mozo.' : 'Los pedidos desde el celular están desactivados por ahora. Puedes ver la carta y pedirle al mozo.'}</p>}
           {shown.length === 0 && <p className="p-10 text-center text-sm text-slate-400">No hay productos en esta categoría.</p>}
           <ul className="divide-y divide-slate-100">
             {shown.map((p) => {
@@ -188,14 +242,14 @@ export default function QrMenu() {
           {justSent && (
             <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
               <CheckCircle2 className="mt-0.5 shrink-0" />
-              <div><div className="font-bold">¡Pedido #{justSent} enviado a cocina!</div><div className="text-sm">Aquí puedes ver cómo avanza. Para pagar, pide la cuenta al personal.</div></div>
+              <div><div className="font-bold">{justSent.awaiting ? `¡Pedido #${justSent.n} enviado!` : `¡Pedido #${justSent.n} enviado a cocina!`}</div><div className="text-sm">{justSent.awaiting ? 'El personal lo confirmará en unos momentos y recién entonces llegará a cocina. Para pagar, pide la cuenta al personal.' : 'Aquí puedes ver cómo avanza. Para pagar, pide la cuenta al personal.'}</div></div>
             </div>
           )}
           {orders.length === 0 ? <p className="py-10 text-center text-sm text-slate-400">Todavía no has hecho pedidos en esta mesa.</p> : orders.map((o) => (
             <div key={o.id} className="rounded-xl border border-slate-200 p-4">
               <div className="flex items-center justify-between">
                 <span className="font-bold">Pedido #{o.order_number}</span>
-                <span className={`badge ${CUSTOMER_STATUS[o.status].cls}`}>{CUSTOMER_STATUS[o.status].text}</span>
+                <span className={`badge ${o.status === 'pending' && o.is_confirmed === false ? AWAITING.cls : CUSTOMER_STATUS[o.status].cls}`}>{o.status === 'pending' && o.is_confirmed === false ? AWAITING.text : CUSTOMER_STATUS[o.status].text}</span>
               </div>
               <ul className="mt-2 text-sm text-slate-600">{o.items.map((it, i) => <li key={i}>{it.quantity}× {it.name}{it.notes && <span className="text-amber-700"> ({it.notes})</span>}</li>)}</ul>
               <div className="mt-2 text-right text-sm font-semibold">{money_(o.total)}</div>
@@ -243,7 +297,7 @@ export default function QrMenu() {
             <div className="space-y-3 border-t border-slate-200 p-5">
               <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{money_(total)}</span></div>
               <button className="btn btn-primary btn-lg w-full" disabled={sending || bad.length > 0 || !lines.length} onClick={send}>{sending ? <><Spinner /> Enviando…</> : 'Confirmar pedido'}</button>
-              <p className="text-center text-xs text-slate-400">Tu pedido llegará directo a la cocina. El pago se realiza con el personal.</p>
+              <p className="text-center text-xs text-slate-400">{info.requires_confirmation ? 'El personal confirma tu pedido antes de pasar a cocina. El pago se realiza con el personal.' : 'Tu pedido llegará directo a la cocina. El pago se realiza con el personal.'}</p>
             </div>
           </div>
         </div>

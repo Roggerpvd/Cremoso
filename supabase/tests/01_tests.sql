@@ -9,6 +9,10 @@ set client_min_messages = notice;
 
 create schema if not exists test;
 
+-- Estas pruebas cubren el comportamiento base del QR. Las sesiones de mesa y la confirmación del personal
+-- (migración 4) se prueban aparte en 05_qr_security_tests.sql, por eso aquí se desactivan.
+update public.restaurant_settings set qr_session_minutes = 0, qr_requires_confirmation = false where id = 1;
+
 create or replace function test.ok(p_cond boolean, p_msg text) returns void language plpgsql as $$
 begin
   if p_cond is not true then raise exception 'FAIL: %', p_msg; end if;
@@ -463,9 +467,9 @@ select test.ok(not exists (select 1 from pg_publication_tables where pubname = '
 select test.ok((select count(*) from storage.buckets where id = 'product-images' and public) = 1, 'bucket público product-images creado');
 select test.ok((select count(*) from pg_policies where schemaname = 'storage' and policyname like 'product_images_%') = 3, 'políticas de Storage: solo menu.manage escribe');
 
-select test.ok(has_function_privilege('anon', 'public.create_qr_order(text,jsonb,uuid,text)', 'execute'), 'anon puede llamar create_qr_order');
+select test.ok(has_function_privilege('anon', 'public.create_qr_order(text,jsonb,uuid,text,uuid)', 'execute'), 'anon puede llamar create_qr_order');
 select test.ok(has_function_privilege('anon', 'public.get_table_by_token(text)', 'execute'), 'anon puede llamar get_table_by_token');
-select test.ok(has_function_privilege('anon', 'public.get_table_orders(text)', 'execute'), 'anon puede llamar get_table_orders');
+select test.ok(has_function_privilege('anon', 'public.get_table_orders(text,uuid)', 'execute'), 'anon puede llamar get_table_orders');
 select test.ok(not has_function_privilege('anon', 'public.create_staff_order(uuid,jsonb,text,uuid)', 'execute'), 'anon NO puede llamar create_staff_order');
 select test.ok(not has_function_privilege('anon', 'public.register_payment(uuid[],public.payment_method,text)', 'execute'), 'anon NO puede llamar register_payment');
 select test.ok(not has_function_privilege('authenticated', 'private.create_order_core(uuid,public.order_channel,jsonb,text,uuid,uuid)', 'execute'), 'ni siquiera authenticated puede llamar el núcleo privado');

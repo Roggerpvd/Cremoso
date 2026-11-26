@@ -16,7 +16,7 @@ srv = subprocess.Popen(['npx', 'vite', 'preview', '--port', str(PORT), '--strict
 time.sleep(3)
 
 SETTINGS = dict(id=1, name='Cremoso Test', currency_symbol='S/', tax_rate=0.18, prices_include_tax=True, timezone='America/Lima',
-                qr_ordering_enabled=True, qr_max_pending_per_table=3, public_base_url=None, receipt_footer=None)
+                qr_ordering_enabled=True, qr_max_pending_per_table=3, qr_session_minutes=180, qr_requires_confirmation=True, public_base_url=None, receipt_footer=None)
 CATS = [dict(id='c1', name='Comidas', description=None, sort_order=1, is_active=True), dict(id='c2', name='Bebidas', description=None, sort_order=2, is_active=True)]
 PRODS = [
     dict(id='p1', category_id='c1', name='Hamburguesa', description='Con queso', ingredients='Carne, pan', price=20, final_price=20, image_path=None, is_available=True, sort_order=1),
@@ -28,6 +28,9 @@ ORDER = dict(id='o1', order_number=12, table_id='t1', channel='qr', status='pend
              tables=dict(number=5, name=None),
              order_items=[dict(id='i1', order_id='o1', product_id='p1', line_no=1, product_name='Hamburguesa', list_price=20, unit_price=20, quantity=1, notes='sin cebolla', line_total=20),
                           dict(id='i2', order_id='o1', product_id='p3', line_no=2, product_name='Gaseosa', list_price=10, unit_price=9, quantity=1, notes=None, line_total=9)])
+ORDER_AW = dict(ORDER, id='o3', order_number=14, status='pending', customer_note=None, is_confirmed=False, total=10,
+                order_items=[dict(id='i20', order_id='o3', product_id='p3', line_no=1, product_name='Jugo de mango', list_price=10, unit_price=10, quantity=1, notes=None, line_total=10)])
+ORDER['is_confirmed'] = True
 PROFILE = dict(id='u1', email='admin@test.pe', full_name='Admin', is_active=True, role='admin', role_label='Administrador', permissions=['*'])
 TABLES = [dict(id='t1', number=5, name=None, capacity=4, qr_token='abc123', is_active=True)]
 
@@ -39,7 +42,9 @@ PAYMENTS = [dict(id='pay1', group_id='g-big', method='card', amount=800, referen
 RECEIPTS = []
 ROLES = [dict(id=1, name='admin', label='Administrador', permissions=['*'], is_system=True),
          dict(id=2, name='kitchen', label='Cocina', permissions=['orders.view', 'orders.kitchen'], is_system=True)]
-USERS = [dict(id='u1', email='admin@test.pe', full_name='Admin', role_id=1, is_active=True, roles=dict(id=1, name='admin', label='Administrador'))]
+USERS = [dict(id='u1', email='admin@test.pe', full_name='Admin', role_id=1, is_active=True, roles=dict(id=1, name='admin', label='Administrador')),
+         dict(id='u2', email='cocina2@restopos.local', full_name='Cocina Dos', role_id=2, is_active=True, roles=dict(id=2, name='kitchen', label='Cocina'))]
+STATE = dict(dead=False)
 calls = []
 def handler(route, request):
     url = request.url; m = request.method
@@ -55,9 +60,12 @@ def handler(route, request):
         calls.append(('staff-admin', body)); return ok(dict(user_id='u2'))
     if path.startswith('/rest/v1/rpc/'):
         fn = path.split('/rpc/')[1].split('?')[0]; calls.append((fn, body))
-        if fn == 'get_table_by_token': return ok(dict(number=5, name=None, restaurant='Cremoso Test', currency='S/', qr_enabled=True))
+        if fn == 'open_table_session': return ok(dict(number=5, name=None, restaurant='Cremoso Test', currency='S/', qr_enabled=True, session_id='sess-1', requires_confirmation=True))
+        if fn == 'get_public_info': return ok(dict(restaurant='Cremoso Test', currency='S/'))
         if fn == 'get_table_orders': return ok([])
-        if fn == 'create_qr_order': return ok(dict(order_id='o9', order_number=7, status='pending', total=49, duplicate=False))
+        if fn == 'create_qr_order':
+            if STATE['dead']: return route.fulfill(status=400, headers={**CORS, 'content-type': 'application/json'}, body=json.dumps(dict(code='P0001', message='SESSION_EXPIRED', details=None, hint=None)))
+            return ok(dict(order_id='o9', order_number=7, status='pending', total=49, duplicate=False, awaiting_confirmation=True))
         if fn == 'get_my_profile': return ok(PROFILE)
         if fn == 'sales_report': return ok(dict(summary=dict(orders=1, total=29, tax=4.42, discounts=1, avg_ticket=29), cancelled=0, by_day=[dict(date='2026-11-23', orders=1, total=29)], by_method=[dict(method='cash', payments=1, total=29)], by_channel=[dict(channel='qr', orders=1, total=29)], top_products=[dict(name='Hamburguesa', quantity=1, total=20)]))
         if fn == 'register_boleta':
@@ -76,7 +84,7 @@ def handler(route, request):
         return ok(dict(access_token='a.b.c', token_type='bearer', expires_in=3600, expires_at=int(time.time()) + 3600, refresh_token='r', user=dict(id='u1', email='admin@test.pe', aud='authenticated', app_metadata={}, user_metadata={}, created_at='2026-01-01T00:00:00Z')))
     if path.startswith('/auth/v1/user'): return ok(dict(id='u1', email='admin@test.pe'))
     table = path.split('/rest/v1/')[1].split('?')[0] if '/rest/v1/' in path else ''
-    data = {'restaurant_settings': SETTINGS, 'categories': CATS, 'menu_products': PRODS, 'orders': [ORDER], 'tables': TABLES, 'payments': PAYMENTS, 'receipts': RECEIPTS, 'roles': ROLES, 'users': USERS}.get(table, [])
+    data = {'restaurant_settings': SETTINGS, 'categories': CATS, 'menu_products': PRODS, 'orders': [ORDER, ORDER_AW], 'tables': TABLES, 'payments': PAYMENTS, 'receipts': RECEIPTS, 'roles': ROLES, 'users': USERS}.get(table, [])
     if obj and isinstance(data, list): data = data[0] if data else None
     if obj and not isinstance(data, list) and table == 'restaurant_settings': return ok(SETTINGS)
     return ok(data)
@@ -95,6 +103,7 @@ try:
         ctx.add_init_script('window.print = () => { window.__printed = (window.__printed || 0) + 1 }')
         page = ctx.new_page()
         js_errors = []
+        page.on('dialog', lambda d: d.accept())
         page.on('pageerror', lambda e: js_errors.append(str(e) + ' @ ' + page.url + ' :: ' + (getattr(e, 'stack', '') or '')[:300]))
 
         # ---- Menú QR (móvil) ----
@@ -113,6 +122,25 @@ try:
         check(sent['p_items'] == [dict(product_id='p1', quantity=2, notes='sin cebolla')], 'QR: envía solo product_id/cantidad/nota (sin precios)')
         check(re.match(r'^[0-9a-f-]{36}$', sent['p_request_id']) is not None, 'QR: incluye clave de idempotencia UUID')
         check(sent['p_token'] == 'abc123', 'QR: envía el token de la mesa')
+        check(sent['p_session_id'] == 'sess-1', 'QR: envía la sesión de la mesa junto con el pedido')
+        check(any(f == 'open_table_session' and b['p_token'] == 'abc123' for f, b in calls), 'QR: al abrir la carta se abre una sesión de mesa')
+        check(page.url.rstrip('/').endswith('/m'), 'QR: el token se quita de la dirección (queda /m)')
+        check(page.locator('link[rel=manifest]').count() == 0, 'QR: la carta del cliente NO declara manifest (no se ofrece instalar la app)')
+        check(page.locator('text=confirmará en unos momentos').count() > 0, 'QR: avisa que el personal debe confirmar el pedido')
+        tab2 = ctx.new_page(); tab2.goto(f'http://127.0.0.1:{PORT}/m'); tab2.wait_for_selector('text=Escanea el código QR', timeout=8000)
+        check(True, 'QR: una pestaña nueva sin escanear NO puede pedir (pide escanear el QR)'); tab2.close()
+        page.reload(); page.wait_for_selector('text=Mesa 5', timeout=8000)
+        check(page.locator('text=Hamburguesa').count() > 0, 'QR: recargar en la misma pestaña conserva la sesión')
+        STATE['dead'] = True
+        page.locator('button:has-text("Agregar")').first.click(); page.locator('text=Ver mi pedido').click(); page.locator('button:has-text("Confirmar pedido")').click()
+        page.wait_for_selector('text=Tu sesión terminó', timeout=8000)
+        check(True, 'QR: con la sesión vencida el pedido no se envía y pide escanear de nuevo')
+        page.reload(); page.wait_for_selector('text=Escanea el código QR', timeout=8000)
+        check(True, 'QR: tras vencer la sesión, recargar ya no abre la mesa')
+        STATE['dead'] = False
+        page.goto(f'http://127.0.0.1:{PORT}/menu'); page.wait_for_selector('text=Hamburguesa', timeout=8000)
+        check(page.locator('text=Mesa 5').count() == 0 and page.locator('button:has-text("Agregar")').count() == 0, 'Carta pública (/menu): se ve la carta sin mesa y sin botones para pedir')
+        check(any(f == 'get_public_info' for f, b in calls), 'Carta pública: pide solo los datos públicos del local')
 
         # ---- Login y pantallas del personal (escritorio) ----
         page.set_viewport_size(dict(width=1366, height=800))
@@ -122,6 +150,11 @@ try:
         page.wait_for_url('**/caja', timeout=10000)
         page.wait_for_selector('text=Nuevo pedido', timeout=10000)
         check(page.locator('text=Hamburguesa').count() > 0, 'Caja: muestra la carta para tomar pedidos')
+        check(page.locator('link[rel=manifest]').count() == 1, 'Personal: las pantallas internas sí declaran el manifest (instalable)')
+        check(page.locator('text=Por confirmar (1)').count() > 0, 'Caja: muestra el pedido del QR por confirmar')
+        if os.environ.get('SHOTS'): page.screenshot(path='/tmp/shot_caja_confirmar.png')
+        page.locator('li:has-text("#14") button:has-text("Aceptar")').click(); time.sleep(0.6)
+        check(any(f == 'confirm_qr_order' and b['p_order_id'] == 'o3' for f, b in calls), 'Caja: "Aceptar" llama a confirm_qr_order')
         page.locator('button:has-text("Hamburguesa")').first.click()
         page.locator('button:has-text("5")').first.click()
         check(page.locator('button:has-text("Enviar a cocina")').is_enabled(), 'Caja: con mesa y producto se habilita "Enviar a cocina"')
@@ -137,6 +170,12 @@ try:
 
         page.goto(f'http://127.0.0.1:{PORT}/cocina')
         page.wait_for_selector('text=#12', timeout=10000)
+        check(page.locator('text=#14').count() == 0, 'Cocina: no muestra pedidos del QR que Caja aún no confirmó')
+        check(page.locator('h2.bg-amber-500, h2.bg-sky-500, h2.bg-emerald-500, h2.bg-slate-500').count() == 0, 'Cocina: los títulos de fase ya no tienen fondo de color')
+        check(page.locator('section h2 span.bg-amber-500').count() >= 1, 'Cocina: el punto de Pendientes está encendido (hay pedidos)')
+        check(page.locator('section h2 span.bg-sky-500').count() == 0, 'Cocina: el punto de En preparación está apagado (no hay pedidos)')
+        check(page.evaluate("getComputedStyle(document.querySelector('header').parentElement).backgroundColor") == 'rgb(255, 255, 255)', 'Cocina: el fondo es blanco')
+        if os.environ.get('SHOTS'): page.screenshot(path='/tmp/shot_cocina.png')
         check(page.locator('text=sin cebolla').count() > 0, 'Cocina: muestra observaciones del ítem')
         check(page.locator('text=sin ají').count() > 0, 'Cocina: muestra la nota general')
         page.locator('button:has-text("Iniciar preparación")').click()
@@ -226,6 +265,9 @@ try:
         page.locator('button:has-text("Crear")').last.click(); time.sleep(0.8)
         sa = [b for f, b in calls if f == 'staff-admin']
         check(bool(sa) and sa[-1]['action'] == 'create' and sa[-1]['username'] == 'cocina1' and sa[-1]['role_id'] == 2, 'Personal: crear usuario llama a la función staff-admin con usuario, contraseña y puesto')
+        check(page.locator('button[aria-label="Eliminar a Admin"]').count() == 0, 'Personal: no hay botón para eliminarse a uno mismo')
+        page.locator('button[aria-label="Eliminar a Cocina Dos"]').click(); time.sleep(0.8)
+        check(any(f == 'staff-admin' and b.get('action') == 'delete' and b.get('user_id') == 'u2' for f, b in calls), 'Personal: eliminar usuario llama a staff-admin con action delete')
         page.locator('button:has-text("Nuevo puesto")').click(); page.wait_for_selector('text=Nuevo puesto >> nth=1', timeout=3000)
         page.fill('#role-label', 'Barista'); page.locator('label:has-text("Tomar pedidos") input').check()
         page.locator('button:has-text("Guardar")').last.click(); time.sleep(0.6)

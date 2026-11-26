@@ -7,6 +7,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 MIGRATION="$HERE/../migrations/20260101000000_init_schema.sql"
 MIGRATION2="$HERE/../migrations/20260102000000_receipts.sql"
 MIGRATION3="$HERE/../migrations/20260103000000_notable_roles.sql"
+MIGRATION4="$HERE/../migrations/20260104000000_qr_seguridad_y_personal.sql"
 PGBIN="${PGBIN:-$(dirname "$(ls /usr/lib/postgresql/*/bin/initdb 2>/dev/null | sort -V | tail -1)")}"
 PORT="${PGPORT:-54999}"
 DATA="$(mktemp -d)"
@@ -31,6 +32,7 @@ echo "▶ Aplicando la migración desde cero"
 run "$PSQL -d resto -f $MIGRATION"
 run "$PSQL -d resto -f $MIGRATION2"
 run "$PSQL -d resto -f $MIGRATION3"
+run "$PSQL -d resto -f $MIGRATION4"
 echo "▶ Ejecutando pruebas funcionales y de seguridad"
 run "$PSQL -d resto -f $HERE/01_tests.sql" 2>&1 | sed -e 's/^psql:.*NOTICE:  //' -e 's/^NOTICE:  //' | grep -E "PASS|FAIL|===|ERROR" | tee "$HERE/last_run.log"
 if grep -q "FAIL\|ERROR" "$HERE/last_run.log"; then echo "✖ HAY FALLOS"; exit 1; fi
@@ -40,6 +42,9 @@ if grep -q "FAIL\|ERROR" "$HERE/last_run_receipts.log"; then echo "✖ HAY FALLO
 echo "▶ Pruebas de pedidos sin mesa y puestos (migración 3)"
 run "$PSQL -d resto -f $HERE/04_notable_roles_tests.sql" 2>&1 | sed -e 's/^psql:.*NOTICE:  //' -e 's/^NOTICE:  //' | grep -E "PASS|FAIL|===|ERROR" | tee "$HERE/last_run_notable_roles.log"
 if grep -q "FAIL\|ERROR" "$HERE/last_run_notable_roles.log"; then echo "✖ HAY FALLOS EN PEDIDOS SIN MESA / PUESTOS"; exit 1; fi
+echo "▶ Pruebas de QR seguro (sesiones, confirmación) y baja de personal (migración 4)"
+run "$PSQL -d resto -f $HERE/05_qr_security_tests.sql" 2>&1 | sed -e 's/^psql:.*NOTICE:  //' -e 's/^NOTICE:  //' | grep -E "PASS|FAIL|===|ERROR" | tee "$HERE/last_run_qr_security.log"
+if grep -q "FAIL\|ERROR" "$HERE/last_run_qr_security.log"; then echo "✖ HAY FALLOS EN QR SEGURO / BAJA DE PERSONAL"; exit 1; fi
 echo "▶ Prueba de concurrencia (pgbench): 8 clientes, misma clave y claves distintas"
 run "$PSQL -d resto -f $HERE/02_concurrency_setup.sql"
 OUT=$(run "$PGBIN/pgbench -h /tmp -p $PORT -U postgres -n -c 8 -j 4 -t 25 -f $HERE/02_race_same_request.sql resto" 2>&1)

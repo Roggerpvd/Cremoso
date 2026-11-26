@@ -70,6 +70,19 @@ export default function Tables() {
               <span>Los QR apuntan a <b>{base}</b>, que los celulares de los clientes no pueden abrir. En <b>Ajustes → URL pública</b> escribe la dirección real (la de Netlify/Cloudflare o la IP de tu red local, p. ej. <code>http://192.168.1.50:8080</code>) y vuelve a imprimir los QR.</span>
             </div>
           )}
+          <div className="card flex flex-wrap items-center gap-4 p-4">
+            <div className="rounded-xl bg-white p-2"><QRCodeCanvas id="qr-carta" value={`${base}/menu`} size={512} marginSize={2} level="M" style={{ width: 96, height: 96 }} /></div>
+            <div className="min-w-48 flex-1">
+              <div className="font-semibold">QR de la carta (solo ver)</div>
+              <p className="text-xs text-slate-500">Abre directo la carta, sin mesa y sin poder pedir. Sirve para la entrada, la vitrina o redes sociales. Los pedidos solo se hacen con el QR de cada mesa.</p>
+              <p className="mt-1 break-all text-xs text-slate-400">{base}/menu</p>
+            </div>
+            <button className="btn btn-secondary btn-sm" onClick={() => {
+              const c = document.getElementById('qr-carta') as HTMLCanvasElement | null
+              if (!c) return
+              const a = document.createElement('a'); a.href = c.toDataURL('image/png'); a.download = 'QR-carta.png'; a.click()
+            }}><Download size={13} /> Descargar</button>
+          </div>
           {loading ? <Loading /> : error ? <ErrorBox text={error} onRetry={load} /> : tables.length === 0 ? <Empty text="Aún no hay mesas" /> : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {tables.map((t) => (

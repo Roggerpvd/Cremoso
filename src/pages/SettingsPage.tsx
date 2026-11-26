@@ -23,6 +23,7 @@ export default function SettingsPage() {
         name: s.name.trim() || 'Mi Restaurante', currency_symbol: s.currency_symbol.trim() || 'S/',
         tax_rate: Number(s.tax_rate), prices_include_tax: s.prices_include_tax, timezone: s.timezone.trim() || 'America/Lima',
         qr_ordering_enabled: s.qr_ordering_enabled, qr_max_pending_per_table: Number(s.qr_max_pending_per_table),
+        qr_session_minutes: Math.max(0, Math.min(1440, Math.round(Number(s.qr_session_minutes) || 0))), qr_requires_confirmation: s.qr_requires_confirmation,
         public_base_url: s.public_base_url?.trim().replace(/\/+$/, '') || null, receipt_footer: s.receipt_footer?.trim() || null,
         legal_name: s.legal_name?.trim() || null, ruc: s.ruc?.trim() || null, address: s.address?.trim() || null, phone: s.phone?.trim() || null,
       }).eq('id', 1))
@@ -49,6 +50,9 @@ export default function SettingsPage() {
           <div className="sm:col-span-2 border-t border-slate-200 pt-4"><h2 className="font-semibold">Pedidos por QR</h2></div>
           <div className="sm:col-span-2"><Toggle checked={s.qr_ordering_enabled} onChange={(v) => setS({ ...s, qr_ordering_enabled: v })} label="Permitir pedir desde el celular (si lo apagas, la carta queda solo para ver)" /></div>
           <Field label="Máx. pedidos QR pendientes por mesa" hint="Freno anti-spam: cuántos pedidos puede tener una mesa esperando a cocina."><input className="input" type="number" min={1} max={20} value={s.qr_max_pending_per_table} onChange={(e) => setS({ ...s, qr_max_pending_per_table: Number(e.target.value) })} /></Field>
+          <div className="sm:col-span-2"><Toggle checked={s.qr_requires_confirmation} onChange={(v) => setS({ ...s, qr_requires_confirmation: v })} label="Los pedidos del QR esperan la confirmación de Caja (recomendado)" />
+            <p className="mt-1 text-xs text-slate-500">Un pedido hecho desde el celular no llega a cocina hasta que el personal lo acepta en Caja. Así una broma o un pedido de alguien que no está en el local no genera trabajo ni cobro. Si lo apagas, los pedidos llegan directo a cocina.</p></div>
+          <Field label="Duración de la sesión del QR (minutos)" hint="Al escanear el QR el cliente puede pedir durante este tiempo. También se cierra al pagar la cuenta de la mesa. 0 = sin límite (no recomendado)."><input className="input" type="number" min={0} max={1440} value={s.qr_session_minutes} onChange={(e) => setS({ ...s, qr_session_minutes: Number(e.target.value) })} /></Field>
           <div className="sm:col-span-2"><Field label="URL pública del sistema (para los QR)" hint="Nube: https://tu-sitio.netlify.app · Red local: http://192.168.1.50:8080. Si cambia, hay que reimprimir los QR.">
             <input className="input" placeholder="https://…" value={s.public_base_url ?? ''} onChange={(e) => setS({ ...s, public_base_url: e.target.value })} /></Field></div>
           <div className="sm:col-span-2"><Field label="Pie del ticket (opcional)"><input className="input" value={s.receipt_footer ?? ''} onChange={(e) => setS({ ...s, receipt_footer: e.target.value })} /></Field></div>

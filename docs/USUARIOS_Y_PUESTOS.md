@@ -32,3 +32,6 @@ En **Caja → Nuevo pedido** elige **Con mesa** (y la mesa) o **Sin mesa** (para
 
 ## Marca
 El nombre del software (**RestoPOS**, íconos, favicon y pantalla de acceso) es fijo. El **nombre del local** que sale en el ticket se cambia en **Ajustes**.
+
+## Eliminar personal
+En **Personal**, el botón rojo de cada usuario lo elimina. Se borra su cuenta (ya no puede entrar y su usuario queda libre) pero **se conservan** los pedidos, cobros y boletas que registró, con el autor en blanco. No se puede eliminar tu propia cuenta ni al último administrador activo. Si solo quieres que no entre por un tiempo, usa el interruptor **Activo**. Requiere haber publicado la versión actual de `staff-admin`.

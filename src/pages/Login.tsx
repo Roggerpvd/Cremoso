@@ -1,15 +1,17 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { homeFor, useAuth } from '../auth/AuthProvider'
 import { errorMessage } from '../lib/errors'
 import { useSettings } from '../lib/settings'
 import { APP_NAME } from '../lib/brand'
 import { Logo, Spinner } from '../components/ui'
+import { enableStaffInstall } from '../lib/pwa'
 
 export default function Login() {
   const { signIn, session, profile, can } = useAuth()
   const { settings } = useSettings()
   const nav = useNavigate()
+  useEffect(() => { enableStaffInstall() }, [])
   const [user, setUser] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false)

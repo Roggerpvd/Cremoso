@@ -11,12 +11,24 @@ import { beep, elapsedLabel, minutesSince, tableLabel, timeHM, unlockAudio } fro
 import { errorMessage } from '../lib/errors'
 import type { Order, OrderStatus } from '../lib/types'
 
-const COLUMNS: { status: OrderStatus; title: string; head: string }[] = [
-  { status: 'pending', title: 'Pendientes', head: 'bg-amber-500' },
-  { status: 'preparing', title: 'En preparación', head: 'bg-sky-500' },
-  { status: 'ready', title: 'Listos', head: 'bg-emerald-500' },
-  { status: 'delivered', title: 'Entregados', head: 'bg-slate-500' },
+// Las columnas ya no llevan color: solo un punto que se enciende con el color de la fase cuando hay pedidos en ella.
+const COLUMNS: { status: OrderStatus; title: string; dot: string; glow: string }[] = [
+  { status: 'pending', title: 'Pendientes', dot: 'bg-amber-500', glow: 'shadow-[0_0_0_4px_rgba(245,158,11,.20)]' },
+  { status: 'preparing', title: 'En preparación', dot: 'bg-sky-500', glow: 'shadow-[0_0_0_4px_rgba(14,165,233,.20)]' },
+  { status: 'ready', title: 'Listos', dot: 'bg-emerald-500', glow: 'shadow-[0_0_0_4px_rgba(16,185,129,.22)]' },
+  { status: 'delivered', title: 'Entregados', dot: 'bg-slate-500', glow: 'shadow-[0_0_0_4px_rgba(100,116,139,.20)]' },
 ]
+const DOT_BY_STATUS = Object.fromEntries(COLUMNS.map((c) => [c.status, c.dot])) as Record<string, string>
+
+/** Punto de fase: apagado (gris) o encendido con el color de la fase; el cambio es una transición suave. */
+function PhaseDot({ on, dot, glow, pulse = false, size = 'h-3 w-3' }: { on: boolean; dot: string; glow: string; pulse?: boolean; size?: string }) {
+  return (
+    <span className="relative inline-flex shrink-0" aria-hidden>
+      {on && pulse && <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-50 ${dot}`} />}
+      <span className={`relative inline-flex rounded-full transition-[background-color,box-shadow] duration-300 ${size} ${on ? `${dot} ${glow}` : 'bg-slate-300'}`} />
+    </span>
+  )
+}
 
 export default function Kitchen() {
   const { can } = useAuth()
@@ -53,40 +65,43 @@ export default function Kitchen() {
 
   const right = (
     <div className="flex items-center gap-2">
-      <ConnectionPill conn={conn} dark />
-      <button className={`btn btn-sm ${sound ? 'bg-emerald-600 text-white' : 'bg-white/10 text-slate-200'}`}
+      <ConnectionPill conn={conn} />
+      <button className={`btn btn-sm ${sound ? 'btn-primary' : 'btn-secondary'}`}
         onClick={() => { unlockAudio(); setSound(!sound); if (!sound) beep(1) }}
         title="Sonido al llegar un pedido (el navegador exige activarlo con un clic)">
         {sound ? <Volume2 size={15} /> : <VolumeX size={15} />} <span className="hidden sm:inline">{sound ? 'Sonido activo' : 'Activar sonido'}</span>
       </button>
-      <button className="btn btn-sm bg-white/10 text-slate-200" onClick={() => document.documentElement.requestFullscreen?.()} title="Pantalla completa">
+      <button className="btn btn-sm btn-secondary" onClick={() => document.documentElement.requestFullscreen?.()} title="Pantalla completa">
         <Maximize size={15} />
       </button>
     </div>
   )
 
   return (
-    <AppShell dark right={right}>
+    <AppShell plain right={right}>
       {loading ? <Loading /> : error ? <ErrorBox text={error} onRetry={reload} /> : (
         <div className="grid gap-3 p-3 sm:p-4 md:grid-cols-2 xl:grid-cols-4">
           {COLUMNS.map((c) => (
-            <section key={c.status} className="flex min-h-[40vh] flex-col rounded-xl bg-slate-800/60">
-              <h2 className={`flex items-center justify-between rounded-t-xl px-4 py-2.5 text-lg font-bold text-white ${c.head}`}>
-                {c.title}
-                <span className="rounded-full bg-black/25 px-2.5 text-base">{cols[c.status].length}</span>
+            <section key={c.status} className="flex min-h-[40vh] flex-col rounded-2xl border border-slate-200 bg-white">
+              <h2 className="flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 text-lg font-bold text-slate-900">
+                <span className="flex items-center gap-2.5">
+                  <PhaseDot on={cols[c.status].length > 0} dot={c.dot} glow={c.glow} pulse={c.status === 'pending'} />
+                  {c.title}
+                </span>
+                <span className="rounded-full bg-slate-100 px-2.5 text-base font-semibold text-slate-600">{cols[c.status].length}</span>
               </h2>
               <div className="flex-1 space-y-3 overflow-y-auto p-3">
-                {cols[c.status].length === 0 && <p className="py-8 text-center text-slate-500">Sin pedidos</p>}
+                {cols[c.status].length === 0 && <p className="py-8 text-center text-slate-400">Sin pedidos</p>}
                 {cols[c.status].map((o) => {
                   const next = nextAction(o, can)
                   const undo = undoAction(o, can)
                   const mins = minutesSince(o.created_at, now)
                   const late = (o.status === 'pending' || o.status === 'preparing') && mins >= 15
                   return (
-                    <article key={o.id} className={`enter rounded-2xl bg-white p-4 text-slate-900 shadow ${late ? 'ring-4 ring-red-500' : ''}`}>
+                    <article key={o.id} className={`enter rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 shadow-sm ${late ? 'ring-2 ring-red-400' : ''}`}>
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <div className="text-3xl font-extrabold leading-none">#{o.order_number}</div>
+                          <div className="flex items-center gap-2 text-3xl font-extrabold leading-none"><PhaseDot on dot={DOT_BY_STATUS[o.status]} glow={COLUMNS.find((x) => x.status === o.status)?.glow ?? ''} size="h-2.5 w-2.5" />#{o.order_number}</div>
                           <div className="mt-1 text-lg font-semibold text-brand-700">{tableLabel(o.tables)}</div>
                         </div>
                         <div className="text-right">
@@ -111,7 +126,7 @@ export default function Kitchen() {
                         <div className="mt-3 flex gap-2">
                           {next && (
                             <button disabled={busy.has(o.id)} onClick={() => move(o, next.to)}
-                              className={`btn btn-lg flex-1 text-white ${o.status === 'pending' ? 'bg-sky-600 hover:bg-sky-700' : o.status === 'preparing' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-700 hover:bg-slate-800'}`}>
+                              className="btn btn-primary btn-lg flex-1">
                               {next.label}
                             </button>
                           )}
