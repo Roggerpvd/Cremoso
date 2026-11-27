@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { AppShell } from '../components/AppShell'
 import { Field, Toggle } from '../components/ui'
 import { useToast } from '../components/Toast'
-import { useSettings } from '../lib/settings'
+import { normalizeBaseUrl, qrBaseUrl, useSettings } from '../lib/settings'
 import { supabase } from '../lib/supabase'
 import { q } from '../lib/api'
 import { errorMessage } from '../lib/errors'
@@ -14,17 +14,21 @@ export default function SettingsPage() {
   const [s, setS] = useState<RestaurantSettings>(settings)
   const [busy, setBusy] = useState(false)
   useEffect(() => setS(settings), [settings])
+  const legacy = settings.qr_session_minutes === undefined   // la base de datos aún no tiene la migración 4
 
   async function save() {
     if (s.ruc && !/^\d{11}$/.test(s.ruc.trim())) { toast('El RUC debe tener 11 dígitos.', 'error'); return }
+    const base = normalizeBaseUrl(s.public_base_url)
+    if (s.public_base_url?.trim() && !base) { toast('La URL pública no es válida. Ejemplo: https://cremoso.pages.dev', 'error'); return }
     setBusy(true)
     try {
       await q(supabase.from('restaurant_settings').update({
         name: s.name.trim() || 'Mi Restaurante', currency_symbol: s.currency_symbol.trim() || 'S/',
         tax_rate: Number(s.tax_rate), prices_include_tax: s.prices_include_tax, timezone: s.timezone.trim() || 'America/Lima',
         qr_ordering_enabled: s.qr_ordering_enabled, qr_max_pending_per_table: Number(s.qr_max_pending_per_table),
-        qr_session_minutes: Math.max(0, Math.min(1440, Math.round(Number(s.qr_session_minutes) || 0))), qr_requires_confirmation: s.qr_requires_confirmation,
-        public_base_url: s.public_base_url?.trim().replace(/\/+$/, '') || null, receipt_footer: s.receipt_footer?.trim() || null,
+        // Los dos ajustes de QR seguro solo existen si ya se ejecutó la migración 4; si no, no se envían (así el resto se puede guardar)
+        ...(legacy ? {} : { qr_session_minutes: Math.max(0, Math.min(1440, Math.round(Number(s.qr_session_minutes) || 0))), qr_requires_confirmation: s.qr_requires_confirmation }),
+        public_base_url: base, receipt_footer: s.receipt_footer?.trim() || null,
         legal_name: s.legal_name?.trim() || null, ruc: s.ruc?.trim() || null, address: s.address?.trim() || null, phone: s.phone?.trim() || null,
       }).eq('id', 1))
       await reload(); toast('Ajustes guardados')
@@ -42,7 +46,7 @@ export default function SettingsPage() {
           <Field label="Impuesto (IGV/IVA) como decimal" hint="0.18 = 18 %"><input className="input" inputMode="decimal" value={s.tax_rate} onChange={(e) => setS({ ...s, tax_rate: e.target.value.replace(',', '.') as unknown as number })} /></Field>
           <div className="flex items-end"><Toggle checked={s.prices_include_tax} onChange={(v) => setS({ ...s, prices_include_tax: v })} label="Los precios ya incluyen impuesto" /></div>
           <div className="sm:col-span-2 border-t border-slate-200 pt-4"><h2 className="font-semibold">Datos del negocio (ticket y boleta)</h2>
-            <p className="text-xs text-slate-500">Se imprimen en el encabezado del ticket. La boleta oficial se emite en SUNAT con estos mismos datos.</p></div>
+            <p className="text-xs text-slate-600">Se imprimen en el encabezado del ticket. La boleta oficial se emite en SUNAT con estos mismos datos.</p></div>
           <div className="sm:col-span-2"><Field label="Razón social o nombre comercial (opcional)"><input className="input" value={s.legal_name ?? ''} onChange={(e) => setS({ ...s, legal_name: e.target.value })} /></Field></div>
           <Field label="RUC" hint="11 dígitos."><input className="input" inputMode="numeric" maxLength={11} value={s.ruc ?? ''} onChange={(e) => setS({ ...s, ruc: e.target.value.replace(/\D/g, '') })} /></Field>
           <Field label="Teléfono (opcional)"><input className="input" value={s.phone ?? ''} onChange={(e) => setS({ ...s, phone: e.target.value })} /></Field>
@@ -50,11 +54,14 @@ export default function SettingsPage() {
           <div className="sm:col-span-2 border-t border-slate-200 pt-4"><h2 className="font-semibold">Pedidos por QR</h2></div>
           <div className="sm:col-span-2"><Toggle checked={s.qr_ordering_enabled} onChange={(v) => setS({ ...s, qr_ordering_enabled: v })} label="Permitir pedir desde el celular (si lo apagas, la carta queda solo para ver)" /></div>
           <Field label="Máx. pedidos QR pendientes por mesa" hint="Freno anti-spam: cuántos pedidos puede tener una mesa esperando a cocina."><input className="input" type="number" min={1} max={20} value={s.qr_max_pending_per_table} onChange={(e) => setS({ ...s, qr_max_pending_per_table: Number(e.target.value) })} /></Field>
-          <div className="sm:col-span-2"><Toggle checked={s.qr_requires_confirmation} onChange={(v) => setS({ ...s, qr_requires_confirmation: v })} label="Los pedidos del QR esperan la confirmación de Caja (recomendado)" />
-            <p className="mt-1 text-xs text-slate-500">Un pedido hecho desde el celular no llega a cocina hasta que el personal lo acepta en Caja. Así una broma o un pedido de alguien que no está en el local no genera trabajo ni cobro. Si lo apagas, los pedidos llegan directo a cocina.</p></div>
-          <Field label="Duración de la sesión del QR (minutos)" hint="Al escanear el QR el cliente puede pedir durante este tiempo. También se cierra al pagar la cuenta de la mesa. 0 = sin límite (no recomendado)."><input className="input" type="number" min={0} max={1440} value={s.qr_session_minutes} onChange={(e) => setS({ ...s, qr_session_minutes: Number(e.target.value) })} /></Field>
-          <div className="sm:col-span-2"><Field label="URL pública del sistema (para los QR)" hint="Nube: https://tu-sitio.netlify.app · Red local: http://192.168.1.50:8080. Si cambia, hay que reimprimir los QR.">
-            <input className="input" placeholder="https://…" value={s.public_base_url ?? ''} onChange={(e) => setS({ ...s, public_base_url: e.target.value })} /></Field></div>
+          {legacy && <div className="sm:col-span-2 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"><b>Falta actualizar la base de datos.</b> Ejecuta en Supabase (SQL Editor) el archivo <code>supabase/migrations/20260104000000_qr_seguridad_y_personal.sql</code>. Mientras tanto el resto de los ajustes se guarda con normalidad, pero la carta del QR no funcionará.</div>}
+          {!legacy && <div className="sm:col-span-2"><Toggle checked={s.qr_requires_confirmation} onChange={(v) => setS({ ...s, qr_requires_confirmation: v })} label="Los pedidos del QR esperan la confirmación de Caja (recomendado)" />
+            <p className="mt-1 text-xs text-slate-600">Un pedido hecho desde el celular no llega a cocina hasta que el personal lo acepta en Caja. Así una broma o un pedido de alguien que no está en el local no genera trabajo ni cobro. Si lo apagas, los pedidos llegan directo a cocina.</p></div>}
+          {!legacy && <Field label="Duración de la sesión del QR (minutos)" hint="Al escanear el QR el cliente puede pedir durante este tiempo. También se cierra al pagar la cuenta de la mesa. 0 = sin límite (no recomendado)."><input className="input" type="number" min={0} max={1440} value={s.qr_session_minutes} onChange={(e) => setS({ ...s, qr_session_minutes: Number(e.target.value) })} /></Field>}
+          <div className="sm:col-span-2"><Field label="URL pública del sistema (para los QR)" hint="Solo la dirección del sistema, sin /login ni otra ruta. Ej.: https://cremoso.pages.dev · Red local: http://192.168.1.50:8080. Si cambia, hay que reimprimir los QR.">
+            <input className="input" placeholder="https://…" value={s.public_base_url ?? ''} onChange={(e) => setS({ ...s, public_base_url: e.target.value })} /></Field>
+            <p className="mt-2 text-sm text-slate-700">Los QR abrirán: <b className="break-all">{qrBaseUrl({ ...s, public_base_url: s.public_base_url })}/m/…</b> ·{' '}
+              <a className="font-semibold text-brand-700 underline" href={`${qrBaseUrl(s)}/menu`} target="_blank" rel="noreferrer">Probar la carta pública</a></p></div>
           <div className="sm:col-span-2"><Field label="Pie del ticket (opcional)"><input className="input" value={s.receipt_footer ?? ''} onChange={(e) => setS({ ...s, receipt_footer: e.target.value })} /></Field></div>
           <div className="sm:col-span-2 flex justify-end"><button className="btn btn-primary" disabled={busy} onClick={save}>Guardar ajustes</button></div>
         </div>

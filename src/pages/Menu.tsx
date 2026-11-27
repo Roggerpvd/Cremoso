@@ -83,11 +83,11 @@ function Categories({ cats, prods, reload }: { cats: Category[]; prods: Product[
         <div className="card divide-y divide-slate-100">
           {cats.map((c) => (
             <div key={c.id} className="flex items-center gap-3 p-3">
-              <span className="w-8 text-center text-sm text-slate-400">{c.sort_order}</span>
-              <div className="flex-1"><div className="font-medium">{c.name}</div><div className="text-xs text-slate-500">{prods.filter((p) => p.category_id === c.id).length} productos{c.description ? ` · ${c.description}` : ''}</div></div>
+              <span className="w-8 text-center text-sm text-slate-500">{c.sort_order}</span>
+              <div className="flex-1"><div className="font-medium">{c.name}</div><div className="text-xs text-slate-600">{prods.filter((p) => p.category_id === c.id).length} productos{c.description ? ` · ${c.description}` : ''}</div></div>
               <Toggle checked={c.is_active} onChange={(v) => toggle(c, v)} label="Visible" />
               <button className="btn btn-ghost btn-sm" onClick={() => setEdit(c)}><Pencil size={15} /></button>
-              <button className="btn btn-ghost btn-sm text-red-600" onClick={() => del(c)}><Trash2 size={15} /></button>
+              <button className="btn btn-ghost btn-sm text-red-700" onClick={() => del(c)}><Trash2 size={15} /></button>
             </div>
           ))}
         </div>
@@ -150,11 +150,11 @@ function Products({ cats, prods, reload }: { cats: Category[]; prods: Product[];
                 {img ? <img src={img} alt="" loading="lazy" className="h-12 w-12 rounded-lg object-cover" /> : <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 text-slate-300"><ImagePlus size={18} /></div>}
                 <div className="min-w-40 flex-1">
                   <div className="font-medium">{p.name}{!p.is_active && <span className="ml-2 badge bg-slate-200 text-slate-600">Retirado</span>}</div>
-                  <div className="text-xs text-slate-500">{cats.find((c) => c.id === p.category_id)?.name} · {fmt(p.price)}</div>
+                  <div className="text-xs text-slate-600">{cats.find((c) => c.id === p.category_id)?.name} · {fmt(p.price)}</div>
                 </div>
                 <Toggle checked={p.is_available} onChange={(v) => patch(p, { is_available: v })} label={p.is_available ? 'Disponible' : 'Agotado'} />
                 <button className="btn btn-ghost btn-sm" onClick={() => setEdit(p)}><Pencil size={15} /></button>
-                <button className="btn btn-ghost btn-sm text-red-600" onClick={() => del(p)}><Trash2 size={15} /></button>
+                <button className="btn btn-ghost btn-sm text-red-700" onClick={() => del(p)}><Trash2 size={15} /></button>
               </div>
             )
           })}
@@ -222,13 +222,13 @@ function ProductForm({ initial, cats, onClose, onSaved }: { initial: Partial<Pro
             <div className="space-y-1">
               <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setFile(f); setPick(null); setRemoveImg(false); setPreview(URL.createObjectURL(f)) } }} className="text-sm" />
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => (local ? setLocal(null) : void openGallery())}>Elegir de la carpeta del sistema</button>
-              {(preview || p.image_path) && !removeImg && <button type="button" className="btn btn-ghost btn-sm text-red-600" onClick={() => { setRemoveImg(true); setFile(null); setPick(null) }}>Quitar foto</button>}
+              {(preview || p.image_path) && !removeImg && <button type="button" className="btn btn-ghost btn-sm text-red-700" onClick={() => { setRemoveImg(true); setFile(null); setPick(null) }}>Quitar foto</button>}
             </div>
           </div>
           {local && (
             <div className="mt-3 rounded-2xl border border-slate-200/80 bg-white/70 p-3">
               {local.length === 0 ? (
-                <p className="text-sm text-slate-500">No hay imágenes en <code>public{LOCAL_IMAGE_DIR}</code>. Copia tus fotos en esa carpeta del proyecto, reinicia <code>npm run dev</code> (o vuelve a publicar) y aparecerán aquí.</p>
+                <p className="text-sm text-slate-600">No hay imágenes en <code>public{LOCAL_IMAGE_DIR}</code>. Copia tus fotos en esa carpeta del proyecto, reinicia <code>npm run dev</code> (o vuelve a publicar) y aparecerán aquí.</p>
               ) : (
                 <div className="grid max-h-56 grid-cols-4 gap-2 overflow-y-auto sm:grid-cols-6">
                   {local.map((name) => (
@@ -241,7 +241,7 @@ function ProductForm({ initial, cats, onClose, onSaved }: { initial: Partial<Pro
               )}
             </div>
           )}
-          {isLocalImage(p.image_path) && !pick && !file && !removeImg && <p className="mt-1 text-xs text-slate-500">Imagen actual: {p.image_path}</p>}
+          {isLocalImage(p.image_path) && !pick && !file && !removeImg && <p className="mt-1 text-xs text-slate-600">Imagen actual: {p.image_path}</p>}
         </div>
         <Toggle checked={p.is_available ?? true} onChange={(v) => setP({ ...p, is_available: v })} label="Disponible (apágalo si está agotado)" />
         <Toggle checked={p.is_active ?? true} onChange={(v) => setP({ ...p, is_active: v })} label="En la carta (apágalo para retirarlo)" />
@@ -294,7 +294,7 @@ function Promotions({ cats, prods, promos, reload }: { cats: Category[]; prods: 
   return (
     <>
       <div className="flex justify-end"><button className="btn btn-primary" onClick={() => setEdit({ target: 'all', discount_type: 'percent', is_active: true })}><Plus size={16} /> Nueva promoción</button></div>
-      <p className="text-sm text-slate-500">Las promociones se aplican automáticamente al precio en la caja y en el menú QR. Si varias coinciden, se usa la que deja el precio más bajo.</p>
+      <p className="text-sm text-slate-600">Las promociones se aplican automáticamente al precio en la caja y en el menú QR. Si varias coinciden, se usa la que deja el precio más bajo.</p>
       {promos.length === 0 ? <Empty text="No hay promociones" /> : (
         <div className="card divide-y divide-slate-100">
           {promos.map((p) => {
@@ -303,14 +303,14 @@ function Promotions({ cats, prods, promos, reload }: { cats: Category[]; prods: 
               <div key={p.id} className="flex flex-wrap items-center gap-3 p-3">
                 <div className="min-w-48 flex-1">
                   <div className="font-medium">{p.name} {expired && <span className="badge bg-slate-200 text-slate-600">Vencida</span>}</div>
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-slate-600">
                     {p.discount_type === 'percent' ? `${p.discount_value}%` : fmt(p.discount_value)} de descuento · {targetOf(p)}
                     {p.starts_at && ` · desde ${new Date(p.starts_at).toLocaleString('es-PE')}`}{p.ends_at && ` · hasta ${new Date(p.ends_at).toLocaleString('es-PE')}`}
                   </div>
                 </div>
                 <Toggle checked={p.is_active} onChange={(v) => toggle(p, v)} label="Activa" />
                 <button className="btn btn-ghost btn-sm" onClick={() => setEdit({ ...p, target: p.product_id ? 'product' : p.category_id ? 'category' : 'all', starts_at: toLocalInput(p.starts_at), ends_at: toLocalInput(p.ends_at) })}><Pencil size={15} /></button>
-                <button className="btn btn-ghost btn-sm text-red-600" onClick={() => del(p)}><Trash2 size={15} /></button>
+                <button className="btn btn-ghost btn-sm text-red-700" onClick={() => del(p)}><Trash2 size={15} /></button>
               </div>
             )
           })}

@@ -145,7 +145,7 @@ function NewOrder({ orders, editing, onDone, onCancelEdit }: {
       <section>
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <div className="relative min-w-48 flex-1">
-            <Search size={15} className="absolute left-3 top-2.5 text-slate-400" />
+            <Search size={15} className="absolute left-3 top-2.5 text-slate-500" />
             <input className="input pl-9" placeholder="Buscar producto…" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </div>
@@ -162,13 +162,13 @@ function NewOrder({ orders, editing, onDone, onCancelEdit }: {
               const img = imageUrl(p.image_path)
               return (
                 <button key={p.id} disabled={!p.is_available} onClick={() => add(p)}
-                  className={`card relative overflow-hidden text-left ${p.is_available ? 'press' : 'opacity-60'} ${qty ? 'ring-2 ring-brand-500' : ''}`}>
+                  className={`card relative overflow-hidden text-left ${p.is_available ? 'press' : 'grayscale'} ${qty ? 'ring-2 ring-brand-500' : ''}`}>
                   {img && <img src={img} alt="" loading="lazy" className="h-24 w-full object-cover" />}
                   <div className="p-3">
                     <div className="text-sm font-semibold leading-tight">{p.name}</div>
                     <div className="mt-1 text-sm">
                       <span className="font-bold text-brand-700">{fmt(p.final_price)}</span>
-                      {p.final_price < p.price && <span className="ml-1 text-xs text-slate-400 line-through">{fmt(p.price)}</span>}
+                      {p.final_price < p.price && <span className="ml-1 text-xs text-slate-500 line-through">{fmt(p.price)}</span>}
                     </div>
                   </div>
                   {!p.is_available && <span className="absolute right-2 top-2 badge bg-red-600 text-white">AGOTADO</span>}
@@ -194,7 +194,7 @@ function NewOrder({ orders, editing, onDone, onCancelEdit }: {
               <button type="button" onClick={() => setNoTable(false)} className={`chip flex-1 justify-center ${!noTable ? 'chip-on' : 'border-slate-300 bg-white'}`}>Con mesa</button>
               <button type="button" onClick={() => { setNoTable(true); setTableId('') }} className={`chip flex-1 justify-center ${noTable ? 'chip-on' : 'border-slate-300 bg-white'}`}>Sin mesa</button>
             </div>
-            {noTable && <p className="rounded-lg bg-slate-100/70 p-2 text-xs text-slate-500">Pedido sin mesa (para llevar o mostrador). Se cobra por separado desde “Cuentas”.</p>}
+            {noTable && <p className="rounded-lg bg-slate-100/70 p-2 text-xs text-slate-600">Pedido sin mesa (para llevar o mostrador). Se cobra por separado desde “Cuentas”.</p>}
             {!noTable && <div className="label">Mesa</div>}
             <div className={`grid grid-cols-5 gap-1.5 sm:grid-cols-6 lg:grid-cols-5 ${noTable ? 'hidden' : ''}`}>
               {tables.map((t) => (
@@ -205,30 +205,30 @@ function NewOrder({ orders, editing, onDone, onCancelEdit }: {
                   {t.number}
                 </button>
               ))}
-              {tables.length === 0 && <p className="col-span-full text-sm text-slate-400">No hay mesas. Créalas en “Mesas y QR”.</p>}
+              {tables.length === 0 && <p className="col-span-full text-sm text-slate-500">No hay mesas. Créalas en “Mesas y QR”.</p>}
             </div>
-            {!noTable && <p className="mt-1 text-xs text-slate-400">Azul claro = mesa con cuenta abierta</p>}
+            {!noTable && <p className="mt-1 text-xs text-slate-500">Azul claro = mesa con cuenta abierta</p>}
           </div>
         )}
 
-        {lines.length === 0 ? <p className="py-6 text-center text-sm text-slate-400">Toca un producto para agregarlo</p> : (
+        {lines.length === 0 ? <p className="py-6 text-center text-sm text-slate-500">Toca un producto para agregarlo</p> : (
           <ul className="divide-y divide-slate-100">
             {lines.map((l) => (
               <li key={l.product.id} className="py-2.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <div className={`text-sm font-medium ${l.product.is_available ? '' : 'text-red-600'}`}>{l.product.name}{!l.product.is_available && ' (agotado)'}</div>
-                    <div className="text-xs text-slate-500">{fmt(l.product.final_price)} c/u</div>
+                    <div className={`text-sm font-medium ${l.product.is_available ? '' : 'text-red-700'}`}>{l.product.name}{!l.product.is_available && ' (agotado)'}</div>
+                    <div className="text-xs text-slate-600">{fmt(l.product.final_price)} c/u</div>
                   </div>
                   <div className="flex items-center gap-1">
                     <button className="btn btn-secondary btn-sm !px-2" onClick={() => setQty(l.product.id, -1)}><Minus size={14} /></button>
                     <span className="w-6 text-center text-sm font-bold">{l.quantity}</span>
                     <button className="btn btn-secondary btn-sm !px-2" onClick={() => setQty(l.product.id, 1)}><Plus size={14} /></button>
-                    <button className="btn btn-ghost btn-sm !px-2 text-red-500" onClick={() => remove(l.product.id)}><Trash2 size={14} /></button>
+                    <button className="btn btn-ghost btn-sm !px-2 text-red-600" onClick={() => remove(l.product.id)}><Trash2 size={14} /></button>
                   </div>
                 </div>
                 <div className="mt-1.5 flex items-center gap-1">
-                  <StickyNote size={13} className="text-slate-400" />
+                  <StickyNote size={13} className="text-slate-500" />
                   <input className="input !py-1 text-xs" placeholder="Observación (sin cebolla, bien cocido…)" value={l.notes} onChange={(e) => setLineNote(l.product.id, e.target.value)} />
                 </div>
               </li>
@@ -239,8 +239,8 @@ function NewOrder({ orders, editing, onDone, onCancelEdit }: {
         <textarea className="input mt-3" rows={2} placeholder="Nota general del pedido (opcional)" maxLength={300} value={note} onChange={(e) => { touch(); setNote(e.target.value) }} />
 
         <div className="mt-3 space-y-1 border-t border-slate-200 pt-3 text-sm">
-          {subtotal !== total && <div className="flex justify-between text-slate-500"><span>Subtotal</span><span>{fmt(subtotal)}</span></div>}
-          {subtotal !== total && <div className="flex justify-between text-emerald-600"><span>Promociones</span><span>− {fmt(subtotal - total)}</span></div>}
+          {subtotal !== total && <div className="flex justify-between text-slate-600"><span>Subtotal</span><span>{fmt(subtotal)}</span></div>}
+          {subtotal !== total && <div className="flex justify-between text-emerald-700"><span>Promociones</span><span>− {fmt(subtotal - total)}</span></div>}
           <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{fmt(total)}</span></div>
         </div>
         {hasUnavailable && <p className="mt-2 rounded bg-red-50 p-2 text-xs text-red-700">Hay productos agotados en el pedido. Quítalos para continuar.</p>}
@@ -316,7 +316,7 @@ function AccountCard({ orders, reload, onEdit }: { orders: Order[]; reload: () =
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <h3 className="text-lg font-bold">{orders[0].table_id ? tableLabel(orders[0].tables) : `Sin mesa · #${orders[0].order_number}`}</h3>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500">{orders.length} pedido{orders.length > 1 ? 's' : ''}</span>
+          <span className="text-sm text-slate-600">{orders.length} pedido{orders.length > 1 ? 's' : ''}</span>
           <button className="btn btn-secondary btn-sm" onClick={() => printNode(<Ticket settings={settings} orders={chosen.length ? chosen : orders} kind="precuenta" />)}><Printer size={13} /> Pre-cuenta</button>
         </div>
       </div>
@@ -334,7 +334,7 @@ function AccountCard({ orders, reload, onEdit }: { orders: Order[]; reload: () =
             </div>
             <div className="mt-1 flex gap-1 pl-6">
               {can('orders.edit') && o.status === 'pending' && <button className="btn btn-ghost btn-sm" onClick={() => onEdit(o)}><Pencil size={13} /> Editar</button>}
-              {can('orders.cancel') && o.status !== 'delivered' && <button className="btn btn-ghost btn-sm text-red-600" onClick={() => cancel(o)}><X size={13} /> Cancelar</button>}
+              {can('orders.cancel') && o.status !== 'delivered' && <button className="btn btn-ghost btn-sm text-red-700" onClick={() => cancel(o)}><X size={13} /> Cancelar</button>}
             </div>
           </li>
         ))}
@@ -349,7 +349,7 @@ function AccountCard({ orders, reload, onEdit }: { orders: Order[]; reload: () =
           </div>
           {method === 'cash'
             ? <div className="flex items-center gap-2"><input className="input" inputMode="decimal" placeholder="Efectivo recibido" value={received} onChange={(e) => setReceived(e.target.value.replace(',', '.'))} />
-                {change !== null && <span className={`whitespace-nowrap text-sm font-semibold ${change < 0 ? 'text-red-600' : 'text-emerald-700'}`}>{change < 0 ? `Falta ${fmt(-change)}` : `Vuelto ${fmt(change)}`}</span>}</div>
+                {change !== null && <span className={`whitespace-nowrap text-sm font-semibold ${change < 0 ? 'text-red-700' : 'text-emerald-700'}`}>{change < 0 ? `Falta ${fmt(-change)}` : `Vuelto ${fmt(change)}`}</span>}</div>
             : <input className="input" placeholder="Referencia / N.º de operación (opcional)" value={ref} onChange={(e) => setRef(e.target.value)} maxLength={100} />}
           <button className="btn btn-primary btn-lg w-full" disabled={busy || !chosen.length || (method === 'cash' && change !== null && change < 0)} onClick={pay}>
             Cobrar {fmt(total)}
@@ -383,12 +383,12 @@ function AwaitingPanel({ orders, reload }: { orders: Order[]; reload: () => void
         <span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-60" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" /></span>
         Por confirmar ({orders.length})
       </h2>
-      <p className="text-xs text-slate-500">Pedidos hechos desde el celular de un cliente. Confirma solo si hay alguien en esa mesa: recién ahí llegan a cocina.</p>
+      <p className="text-xs text-slate-600">Pedidos hechos desde el celular de un cliente. Confirma solo si hay alguien en esa mesa: recién ahí llegan a cocina.</p>
       <ul className="stagger mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {orders.map((o) => (
           <li key={o.id} className="rounded-2xl border border-slate-200/80 bg-white/80 p-3">
             <div className="flex items-start justify-between gap-2">
-              <div><div className="font-bold">#{o.order_number} · {tableLabel(o.tables)}</div><div className="text-xs text-slate-500">{new Date(o.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</div></div>
+              <div><div className="font-bold">#{o.order_number} · {tableLabel(o.tables)}</div><div className="text-xs text-slate-600">{new Date(o.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</div></div>
               <div className="font-semibold">{fmt(o.total)}</div>
             </div>
             <ul className="mt-2 text-sm text-slate-600">

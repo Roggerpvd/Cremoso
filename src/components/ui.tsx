@@ -47,7 +47,7 @@ export const ConnectionPill = ({ conn, dark = false }: { conn: Conn; dark?: bool
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${dark ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-700'}`}>
       <span className={`h-2 w-2 rounded-full ${dot} ${conn === 'online' ? '' : 'animate-pulse'}`} />
-      <Icon size={13} /> {label}
+      <Icon size={14} /> <span className="hidden xl:inline">{label}</span>
     </span>
   )
 }
@@ -89,7 +89,7 @@ export const Field = ({ label, children, hint }: { label: string; children: Reac
   <div>
     <label className="label">{label}</label>
     {children}
-    {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
+    {hint && <p className="mt-1 text-xs text-slate-600">{hint}</p>}
   </div>
 )
 
@@ -103,7 +103,7 @@ export const Toggle = ({ checked, onChange, label, disabled }: { checked: boolea
   </label>
 )
 
-export const Empty = ({ text }: { text: string }) => <div className="p-10 text-center text-sm text-slate-400">{text}</div>
+export const Empty = ({ text }: { text: string }) => <div className="p-10 text-center text-sm text-slate-500">{text}</div>
 
 /** Logotipo RestoPOS (cubiertos sobre azul acero). Coincide con public/favicon.svg. */
 export function Logo({ size = 32 }: { size?: number }) {

@@ -59,7 +59,7 @@ export default function Receipts() {
       <div className="mx-auto max-w-4xl space-y-4 p-3 sm:p-5">
         <div className="card flex flex-wrap items-end gap-3 p-4">
           <div><label className="label">Fecha de cobro</label><DatePicker value={date} max={todayISO()} onChange={(v) => setDate(v || todayISO())} /></div>
-          <p className="max-w-md text-xs text-slate-500">Aquí imprimes el <b>ticket</b> de cualquier cuenta cobrada y preparas la <b>boleta</b>. La boleta oficial se emite en SUNAT; el sistema guarda los datos y la serie-número resultante.</p>
+          <p className="max-w-md text-xs text-slate-600">Aquí imprimes el <b>ticket</b> de cualquier cuenta cobrada y preparas la <b>boleta</b>. La boleta oficial se emite en SUNAT; el sistema guarda los datos y la serie-número resultante.</p>
         </div>
         {loading ? <Loading /> : error ? <ErrorBox text={error} onRetry={load} /> : !groups.length ? <Empty text="No hay cobros en esa fecha." /> : (
           <ul className="stagger space-y-2">
@@ -69,7 +69,7 @@ export default function Receipts() {
                 <li key={g.group_id} className="card flex flex-wrap items-center gap-3 p-3">
                   <div className="min-w-0 flex-1">
                     <div className="font-semibold">{[...new Set(g.orders.map((o) => tableLabel(o.tables)))].join(' / ')} · {fmt(g.total)}</div>
-                    <div className="text-xs text-slate-500">{timeHM(g.paid_at)} · {METHOD_LABEL[g.method]} · pedidos {g.orders.map((o) => `#${o.order_number}`).join(', ')}</div>
+                    <div className="text-xs text-slate-600">{timeHM(g.paid_at)} · {METHOD_LABEL[g.method]} · pedidos {g.orders.map((o) => `#${o.order_number}`).join(', ')}</div>
                   </div>
                   {r ? <span className={`badge ${r.status === 'issued' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{r.status === 'issued' ? `Boleta ${r.sunat_ref}` : 'Boleta preparada (falta emitir)'}</span>
                      : <span className="badge bg-slate-100 text-slate-600">Sin boleta</span>}

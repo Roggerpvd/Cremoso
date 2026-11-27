@@ -131,7 +131,7 @@ export function BoletaModal({ group, receipt, onClose, onChanged }: {
         <div className="space-y-4 text-sm">
           <div className="rounded-lg border border-slate-200 p-3">
             <p><b>Cliente:</b> {receipt.customer_name}{docText(receipt) && ` · ${docText(receipt)}`}</p>
-            <table className="mt-2 w-full text-sm"><thead><tr className="text-left text-xs text-slate-500"><th>Producto</th><th className="text-right">Cantidad</th><th className="text-right">Monto</th></tr></thead>
+            <table className="mt-2 w-full text-sm"><thead><tr className="text-left text-xs text-slate-600"><th>Producto</th><th className="text-right">Cantidad</th><th className="text-right">Monto</th></tr></thead>
               <tbody>{receipt.items.map((l, i) => <tr key={i}><td>{l.product}</td><td className="text-right">{l.quantity}</td><td className="text-right">{fmt(l.amount)}</td></tr>)}</tbody>
               <tfoot><tr className="font-bold"><td colSpan={2} className="pt-1 text-right">Total</td><td className="pt-1 text-right">{fmt(receipt.total)}</td></tr></tfoot></table>
           </div>
@@ -160,8 +160,8 @@ export function BoletaModal({ group, receipt, onClose, onChanged }: {
                 <input className="input" placeholder="Serie-número, ej. B001-123" value={ref} onChange={(e) => { const v = e.target.value.toUpperCase(); const m = v.match(/[A-Z0-9]{4}-\d{1,8}/); setRef(m ? m[0] : v.slice(0, 13)) }} />
                 <button className="btn btn-primary" disabled={busy || !ref.trim()} onClick={markIssued}>Registrar emitida</button>
               </div>
-              <button className="btn btn-ghost btn-sm text-red-600" disabled={busy} onClick={discard}><Trash2 size={14} /> Descartar y corregir datos</button>
-              <p className="text-xs text-slate-500">La Clave SOL se escribe solo en el sitio de SUNAT; este sistema nunca la pide ni la guarda.</p>
+              <button className="btn btn-ghost btn-sm text-red-700" disabled={busy} onClick={discard}><Trash2 size={14} /> Descartar y corregir datos</button>
+              <p className="text-xs text-slate-600">La Clave SOL se escribe solo en el sitio de SUNAT; este sistema nunca la pide ni la guarda.</p>
             </div>
           )}
           {issued && <p className="rounded-lg bg-emerald-50 p-3 text-emerald-800">Registrada como emitida en SUNAT el {new Date(receipt.issued_at ?? receipt.created_at).toLocaleString('es-PE')}. Si hay un error en la boleta, se corrige o anula en SUNAT (no aquí).</p>}
@@ -207,11 +207,11 @@ export function BoletaModal({ group, receipt, onClose, onChanged }: {
               </div>
             ))}
           </div>
-          <div className={`mt-2 flex justify-between text-sm font-semibold ${balanced ? 'text-emerald-700' : 'text-red-600'}`}>
+          <div className={`mt-2 flex justify-between text-sm font-semibold ${balanced ? 'text-emerald-700' : 'text-red-700'}`}>
             <span>Suma de montos {fmt(sum)}</span><span>Total cobrado {fmt(group.total)}</span>
           </div>
         </div>
-        {formError && <p className="text-xs text-red-600">{formError}</p>}
+        {formError && <p className="text-xs text-red-700">{formError}</p>}
       </div>
     </Modal>
   )

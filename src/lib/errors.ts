@@ -32,6 +32,7 @@ const MESSAGES: Record<string, string> = {
   USERNAME_TAKEN: 'Ya existe un usuario con ese nombre.',
   CREATE_FAILED: 'No se pudo crear el usuario. Revisa los datos e inténtalo de nuevo.',
   ROLE_ASSIGN_FAILED: 'El usuario se creó pero no se pudo asignar el puesto. Asígnalo desde la lista.',
+  FUNCTION_UNREACHABLE: 'No se pudo contactar la función «staff-admin» de Supabase. Casi siempre es porque aún no está publicada: sigue los pasos de docs/USUARIOS_Y_PUESTOS.md (sección «Publicar la función»).',
   FUNCTION_NOT_DEPLOYED: 'Falta publicar la función staff-admin en Supabase (ver docs/USUARIOS_Y_PUESTOS.md).',
   DELETE_FAILED: 'No se pudo eliminar el usuario.',
   UPDATE_FAILED: 'No se pudo actualizar la contraseña.',
@@ -74,6 +75,7 @@ export function errorMessage(e: unknown): string {
   if (err.code === 'FK_VIOLATION') return 'No se puede eliminar porque tiene registros asociados.'
   if (MESSAGES[err.code]) return MESSAGES[err.code]
   if (/invalid login credentials/i.test(err.message)) return 'Usuario o contraseña incorrectos.'
+  if (/schema cache|could not find the function/i.test(err.message)) return 'Falta aplicar una actualización de la base de datos (migración pendiente). Revisa el README, sección «Base de datos».'
   return err.message.length > 160 ? 'Ocurrió un error inesperado.' : err.message
 }
 

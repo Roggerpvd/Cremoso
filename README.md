@@ -24,7 +24,7 @@ Sistema real (no maqueta) de gestión de pedidos: caja/POS, carta digital, QR po
 ## Puesta en marcha (nube gratuita)
 
 1. **Crea un proyecto en Supabase** (plan Free) en <https://supabase.com>.
-2. **Base de datos:** en *SQL Editor* pega y ejecuta `supabase/schema_completo.sql` (todo en uno: tablas, índices, RLS, funciones, bucket de fotos y boletas). Si ya tenías el sistema instalado, ejecuta solo lo que te falte: `supabase/migrations/20260102000000_receipts.sql` (boletas), `supabase/migrations/20260103000000_notable_roles.sql` (pedidos sin mesa y puestos administrables) y `supabase/migrations/20260104000000_qr_seguridad_y_personal.sql` (QR seguro: sesiones y confirmación del personal; eliminar personal). Las dos últimas se pueden ejecutar más de una vez sin problema. Después vuelve a publicar la función `staff-admin` (`npx supabase functions deploy staff-admin`): ahora también da de baja usuarios. Opcional: `supabase/seed_demo.sql` para una carta y 8 mesas de ejemplo.
+2. **Base de datos:** en *SQL Editor* pega y ejecuta `supabase/schema_completo.sql` (todo en uno: tablas, índices, RLS, funciones, bucket de fotos y boletas). Si ya tenías el sistema instalado, ejecuta solo lo que te falte: `supabase/migrations/20260102000000_receipts.sql` (boletas), `supabase/migrations/20260103000000_notable_roles.sql` (pedidos sin mesa y puestos administrables) `supabase/migrations/20260104000000_qr_seguridad_y_personal.sql` (QR seguro: sesiones y confirmación del personal; eliminar personal) y `supabase/migrations/20260105000000_sin_mozo_entrega_cocina.sql` (quita el puesto Mozo; Cocina marca «entregado»). Las tres últimas se pueden ejecutar más de una vez sin problema; ejecútalas en orden. Después vuelve a publicar la función `staff-admin` (`npx supabase functions deploy staff-admin`): ahora también da de baja usuarios. Opcional: `supabase/seed_demo.sql` para una carta y 8 mesas de ejemplo.
 3. **Desactiva el registro público:** *Authentication → Sign In / Providers → desactiva "Allow new users to sign up"*. Así solo tú creas cuentas.
 4. **Crea tu primer usuario** (queda como **administrador** automáticamente): *Authentication → Users → Add user → Create new user* (marca "Auto Confirm"). Los siguientes usuarios no reciben rol hasta que el admin se lo asigne en `/usuarios`.
 5. **Configura la app:** copia *Project URL* y la clave *anon/publishable* (*Project Settings → API*) en `public/config.js` (o en `.env` para desarrollo). **Nunca** pongas la `service_role` ahí.
@@ -68,7 +68,7 @@ Ver `docs/INSTALACION_LOCAL.md` (Supabase CLI + Docker + una PC en el local).
 
 ## Pruebas
 ```bash
-npm run test:db                                  # 150 pruebas SQL + 42 de boletas + 36 de pedidos sin mesa/puestos + 43 de QR seguro/baja de personal + concurrencia (PostgreSQL local temporal)
+npm run test:db                                  # 150 pruebas SQL + 42 de boletas + 36 de pedidos sin mesa/puestos + 43 de QR seguro/baja de personal + 10 de sin Mozo/entrega desde Cocina + concurrencia (PostgreSQL local temporal)
 npm run build && python3 tests/ui-smoke/smoke.py # prueba de humo de la interfaz en Chrome con servidor simulado
 ```
 Detalle en `docs/PRUEBAS.md`.

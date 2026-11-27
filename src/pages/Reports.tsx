@@ -57,7 +57,7 @@ export default function Reports() {
           <>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {[['Ventas', fmt(data.summary.total)], ['Pedidos pagados', String(data.summary.orders)], ['Ticket promedio', fmt(data.summary.avg_ticket)], ['Cancelados', String(data.cancelled)]].map(([l, v]) => (
-                <div key={l} className="card p-4"><div className="text-xs text-slate-500">{l}</div><div className="mt-1 text-2xl font-extrabold">{v}</div></div>
+                <div key={l} className="card p-4"><div className="text-xs text-slate-600">{l}</div><div className="mt-1 text-2xl font-extrabold">{v}</div></div>
               ))}
             </div>
             <div className="card p-4">
@@ -66,10 +66,10 @@ export default function Reports() {
                 <div className="space-y-1.5">
                   {data.by_day.map((d) => (
                     <div key={d.date} className="flex items-center gap-3 text-sm">
-                      <span className="w-24 text-slate-500">{d.date}</span>
+                      <span className="w-24 text-slate-600">{d.date}</span>
                       <div className="h-5 flex-1 rounded bg-slate-100"><div className="h-5 rounded bg-brand-500" style={{ width: `${(Number(d.total) / maxDay) * 100}%` }} /></div>
                       <span className="w-28 text-right font-semibold">{fmt(Number(d.total))}</span>
-                      <span className="w-16 text-right text-xs text-slate-400">{d.orders} ped.</span>
+                      <span className="w-16 text-right text-xs text-slate-500">{d.orders} ped.</span>
                     </div>
                   ))}
                 </div>
@@ -78,13 +78,13 @@ export default function Reports() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="card p-4">
                 <h2 className="mb-2 font-semibold">Por método de pago</h2>
-                {data.by_method.length === 0 ? <Empty text="—" /> : data.by_method.map((m) => <div key={m.method} className="flex justify-between border-b border-slate-100 py-1.5 text-sm last:border-0"><span>{METHOD_LABEL[m.method]} <span className="text-slate-400">({m.payments})</span></span><b>{fmt(Number(m.total))}</b></div>)}
+                {data.by_method.length === 0 ? <Empty text="—" /> : data.by_method.map((m) => <div key={m.method} className="flex justify-between border-b border-slate-100 py-1.5 text-sm last:border-0"><span>{METHOD_LABEL[m.method]} <span className="text-slate-500">({m.payments})</span></span><b>{fmt(Number(m.total))}</b></div>)}
                 <h2 className="mb-2 mt-4 font-semibold">Por canal</h2>
-                {data.by_channel.map((c) => <div key={c.channel} className="flex justify-between border-b border-slate-100 py-1.5 text-sm last:border-0"><span>{c.channel === 'qr' ? 'Código QR' : 'Interno (personal)'} <span className="text-slate-400">({c.orders})</span></span><b>{fmt(Number(c.total))}</b></div>)}
+                {data.by_channel.map((c) => <div key={c.channel} className="flex justify-between border-b border-slate-100 py-1.5 text-sm last:border-0"><span>{c.channel === 'qr' ? 'Código QR' : 'Interno (personal)'} <span className="text-slate-500">({c.orders})</span></span><b>{fmt(Number(c.total))}</b></div>)}
               </div>
               <div className="card p-4">
                 <h2 className="mb-2 font-semibold">Productos más vendidos</h2>
-                {data.top_products.length === 0 ? <Empty text="—" /> : data.top_products.map((p, i) => <div key={p.name} className="flex items-center gap-2 border-b border-slate-100 py-1.5 text-sm last:border-0"><span className="w-5 text-slate-400">{i + 1}</span><span className="flex-1">{p.name}</span><span className="text-slate-500">{p.quantity} u.</span><b className="w-24 text-right">{fmt(Number(p.total))}</b></div>)}
+                {data.top_products.length === 0 ? <Empty text="—" /> : data.top_products.map((p, i) => <div key={p.name} className="flex items-center gap-2 border-b border-slate-100 py-1.5 text-sm last:border-0"><span className="w-5 text-slate-500">{i + 1}</span><span className="flex-1">{p.name}</span><span className="text-slate-600">{p.quantity} u.</span><b className="w-24 text-right">{fmt(Number(p.total))}</b></div>)}
               </div>
             </div>
           </>

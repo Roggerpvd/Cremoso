@@ -107,7 +107,7 @@ export function DatePicker({ value, onChange, min, max, range, id }: Props) {
             <div className="text-sm font-semibold" aria-live="polite">{monthLabel(view)}</div>
             <button type="button" className="btn btn-ghost btn-sm !px-2" onClick={() => go(1)} aria-label="Mes siguiente"><ChevronRight size={16} /></button>
           </div>
-          <div className="grid grid-cols-7 text-center text-[11px] font-medium text-slate-400">{DOW.map((d, i) => <div key={i} className="py-1">{d}</div>)}</div>
+          <div className="grid grid-cols-7 text-center text-xs font-medium text-slate-500">{DOW.map((d, i) => <div key={i} className="py-1">{d}</div>)}</div>
           <div ref={grid} key={`${view.getFullYear()}-${view.getMonth()}`} onKeyDown={onKey} role="grid" className={`grid grid-cols-7 gap-y-0.5 ${dir === 'next' ? 'cal-next' : 'cal-prev'}`}>
             {days.map((d) => {
               const iso = toISO(d)

@@ -88,6 +88,12 @@ select test.ok((select count(*) from public.users where role_id is null) = 4,
                'los siguientes usuarios NO reciben rol automáticamente (registro abierto no da acceso)');
 commit;
 
+-- El puesto "Mozo" ya no existe en el sistema (migración 5). Estas pruebas necesitan un puesto con permisos limitados
+-- (puede tomar pedidos y entregar, pero no cocinar, cobrar ni cancelar), así que se crea uno solo para la prueba.
+insert into public.roles (name, label, permissions, is_system)
+values ('waiter', 'Puesto limitado (solo pruebas)', array['orders.view','orders.create','orders.edit','orders.serve'], false)
+on conflict (name) do nothing;
+
 begin;
 select test.login(:'uA');
 select public.admin_update_user(:'uB', (select id from public.roles where name = 'cashier'), 'Caja 1', true);
@@ -312,7 +318,7 @@ select test.ok((select preparing_at is not null from public.orders where id = :'
 select test.raises(format('select public.set_order_status(%L, ''delivered'')', :'o2'), 'INVALID_TRANSITION', 'pendiente → entregado está prohibido (no se saltan estados)');
 select public.set_order_status(:'o1', 'ready');
 select test.ok((select ready_at is not null from public.orders where id = :'o1'), 'en preparación → listo registra ready_at');
-select test.raises(format('select public.set_order_status(%L, ''delivered'')', :'o1'), 'FORBIDDEN', 'cocina NO puede marcar entregado');
+select test.ok((public.set_order_status(:'o1', 'delivered') ->> 'status') = 'delivered', 'cocina SÍ puede marcar un pedido listo como entregado (migración 5)');
 commit;
 
 begin;

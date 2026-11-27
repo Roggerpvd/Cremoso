@@ -191,7 +191,7 @@ export default function QrMenu({ readOnly = false }: { readOnly?: boolean }) {
         </div>
         {!readOnly && <div className="flex border-t border-slate-100">
           {([['menu', 'Carta', ChefHat], ['orders', `Mis pedidos${orders.length ? ` (${orders.length})` : ''}`, ClipboardList]] as const).map(([k, l, Icon]) => (
-            <button key={k} onClick={() => setView(k)} className={`flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm font-medium ${view === k ? 'border-b-2 border-brand-600 text-brand-700' : 'text-slate-500'}`}><Icon size={16} />{l}</button>
+            <button key={k} onClick={() => setView(k)} className={`flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm font-medium ${view === k ? 'border-b-2 border-brand-600 text-brand-700' : 'text-slate-600'}`}><Icon size={16} />{l}</button>
           ))}
         </div>}
         {view === 'menu' && (
@@ -205,20 +205,20 @@ export default function QrMenu({ readOnly = false }: { readOnly?: boolean }) {
       {view === 'menu' ? (
         <main>
           {!canOrder && <p className="m-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{readOnly ? 'Esta es la carta para ver. Para pedir, escanea el código QR de tu mesa o pídele al mozo.' : 'Los pedidos desde el celular están desactivados por ahora. Puedes ver la carta y pedirle al mozo.'}</p>}
-          {shown.length === 0 && <p className="p-10 text-center text-sm text-slate-400">No hay productos en esta categoría.</p>}
+          {shown.length === 0 && <p className="p-10 text-center text-sm text-slate-500">No hay productos en esta categoría.</p>}
           <ul className="divide-y divide-slate-100">
             {shown.map((p) => {
               const img = imageUrl(p.image_path)
               const qty = cart[p.id]?.q ?? 0
               return (
-                <li key={p.id} className={`flex gap-3 p-4 ${p.is_available ? '' : 'opacity-60'}`}>
+                <li key={p.id} className={`flex gap-3 p-4 ${p.is_available ? '' : 'grayscale'}`}>
                   <div className="min-w-0 flex-1">
                     <h3 className="font-semibold leading-tight">{p.name}</h3>
-                    {p.description && <p className="mt-0.5 line-clamp-2 text-sm text-slate-500">{p.description}</p>}
-                    {p.ingredients && <p className="mt-0.5 line-clamp-1 text-xs text-slate-400">{p.ingredients}</p>}
+                    {p.description && <p className="mt-0.5 line-clamp-2 text-sm text-slate-600">{p.description}</p>}
+                    {p.ingredients && <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">{p.ingredients}</p>}
                     <div className="mt-1.5">
                       <span className="font-bold text-brand-700">{money_(p.final_price)}</span>
-                      {p.final_price < p.price && <span className="ml-2 text-xs text-slate-400 line-through">{money_(p.price)}</span>}
+                      {p.final_price < p.price && <span className="ml-2 text-xs text-slate-500 line-through">{money_(p.price)}</span>}
                     </div>
                   </div>
                   <div className="flex w-24 shrink-0 flex-col items-center gap-2">
@@ -245,7 +245,7 @@ export default function QrMenu({ readOnly = false }: { readOnly?: boolean }) {
               <div><div className="font-bold">{justSent.awaiting ? `¡Pedido #${justSent.n} enviado!` : `¡Pedido #${justSent.n} enviado a cocina!`}</div><div className="text-sm">{justSent.awaiting ? 'El personal lo confirmará en unos momentos y recién entonces llegará a cocina. Para pagar, pide la cuenta al personal.' : 'Aquí puedes ver cómo avanza. Para pagar, pide la cuenta al personal.'}</div></div>
             </div>
           )}
-          {orders.length === 0 ? <p className="py-10 text-center text-sm text-slate-400">Todavía no has hecho pedidos en esta mesa.</p> : orders.map((o) => (
+          {orders.length === 0 ? <p className="py-10 text-center text-sm text-slate-500">Todavía no has hecho pedidos en esta mesa.</p> : orders.map((o) => (
             <div key={o.id} className="rounded-xl border border-slate-200 p-4">
               <div className="flex items-center justify-between">
                 <span className="font-bold">Pedido #{o.order_number}</span>
@@ -279,7 +279,7 @@ export default function QrMenu({ readOnly = false }: { readOnly?: boolean }) {
               {lines.map((l) => (
                 <div key={l.p.id}>
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1"><div className={`font-medium ${l.p.is_available ? '' : 'text-red-600'}`}>{l.p.name}{!l.p.is_available && ' — agotado, quítalo'}</div><div className="text-xs text-slate-500">{money_(l.p.final_price)} c/u</div></div>
+                    <div className="min-w-0 flex-1"><div className={`font-medium ${l.p.is_available ? '' : 'text-red-700'}`}>{l.p.name}{!l.p.is_available && ' — agotado, quítalo'}</div><div className="text-xs text-slate-600">{money_(l.p.final_price)} c/u</div></div>
                     <div className="flex items-center gap-2 rounded-lg border border-slate-300">
                       <button className="p-1.5" onClick={() => setQty(l.p.id, -1)}><Minus size={16} /></button>
                       <span className="w-5 text-center font-bold">{l.q}</span>
@@ -287,7 +287,7 @@ export default function QrMenu({ readOnly = false }: { readOnly?: boolean }) {
                     </div>
                     <div className="w-20 text-right font-semibold">{money_(l.q * l.p.final_price)}</div>
                   </div>
-                  <div className="mt-1.5 flex items-center gap-1.5"><StickyNote size={14} className="text-slate-400" />
+                  <div className="mt-1.5 flex items-center gap-1.5"><StickyNote size={14} className="text-slate-500" />
                     <input className="input !py-1.5 text-sm" placeholder="¿Alguna indicación? (sin cebolla, poco picante…)" value={l.n} maxLength={200} onChange={(e) => setLineNote(l.p.id, e.target.value)} /></div>
                 </div>
               ))}
@@ -297,7 +297,7 @@ export default function QrMenu({ readOnly = false }: { readOnly?: boolean }) {
             <div className="space-y-3 border-t border-slate-200 p-5">
               <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{money_(total)}</span></div>
               <button className="btn btn-primary btn-lg w-full" disabled={sending || bad.length > 0 || !lines.length} onClick={send}>{sending ? <><Spinner /> Enviando…</> : 'Confirmar pedido'}</button>
-              <p className="text-center text-xs text-slate-400">{info.requires_confirmation ? 'El personal confirma tu pedido antes de pasar a cocina. El pago se realiza con el personal.' : 'Tu pedido llegará directo a la cocina. El pago se realiza con el personal.'}</p>
+              <p className="text-center text-xs text-slate-500">{info.requires_confirmation ? 'El personal confirma tu pedido antes de pasar a cocina. El pago se realiza con el personal.' : 'Tu pedido llegará directo a la cocina. El pago se realiza con el personal.'}</p>
             </div>
           </div>
         </div>

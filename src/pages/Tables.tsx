@@ -74,8 +74,8 @@ export default function Tables() {
             <div className="rounded-xl bg-white p-2"><QRCodeCanvas id="qr-carta" value={`${base}/menu`} size={512} marginSize={2} level="M" style={{ width: 96, height: 96 }} /></div>
             <div className="min-w-48 flex-1">
               <div className="font-semibold">QR de la carta (solo ver)</div>
-              <p className="text-xs text-slate-500">Abre directo la carta, sin mesa y sin poder pedir. Sirve para la entrada, la vitrina o redes sociales. Los pedidos solo se hacen con el QR de cada mesa.</p>
-              <p className="mt-1 break-all text-xs text-slate-400">{base}/menu</p>
+              <p className="text-xs text-slate-600">Abre directo la carta, sin mesa y sin poder pedir. Sirve para la entrada, la vitrina o redes sociales. Los pedidos solo se hacen con el QR de cada mesa.</p>
+              <p className="mt-1 break-all text-xs text-slate-500">{base}/menu</p>
             </div>
             <button className="btn btn-secondary btn-sm" onClick={() => {
               const c = document.getElementById('qr-carta') as HTMLCanvasElement | null
@@ -90,14 +90,14 @@ export default function Tables() {
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="text-xl font-bold">Mesa {t.number}</div>
-                      <div className="text-xs text-slate-500">{t.name ? `${t.name} · ` : ''}{t.capacity} personas{!t.is_active && ' · desactivada'}</div>
+                      <div className="text-xs text-slate-600">{t.name ? `${t.name} · ` : ''}{t.capacity} personas{!t.is_active && ' · desactivada'}</div>
                     </div>
                     <button className="btn btn-ghost btn-sm" onClick={() => setEdit(t)}><Pencil size={15} /></button>
                   </div>
                   <div className="my-3 flex justify-center rounded-lg bg-white p-2">
                     <QRCodeCanvas id={`qr-${t.id}`} value={urlOf(t)} size={512} marginSize={2} level="M" style={{ width: 150, height: 150 }} />
                   </div>
-                  <p className="truncate text-center text-[11px] text-slate-400">{urlOf(t)}</p>
+                  <p className="truncate text-center text-xs text-slate-500">{urlOf(t)}</p>
                   <div className="mt-3 flex flex-wrap justify-center gap-1.5">
                     <button className="btn btn-secondary btn-sm" onClick={() => setPrinting([t])}><Printer size={13} /> Imprimir</button>
                     <button className="btn btn-secondary btn-sm" onClick={() => {

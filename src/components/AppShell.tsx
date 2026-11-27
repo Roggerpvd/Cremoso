@@ -62,24 +62,24 @@ export function AppShell({ children, dark = false, plain = false, right }: { chi
             <Logo size={30} />
             <div className="leading-tight">
               <div className={`text-[15px] font-bold tracking-tight ${dark ? 'text-white' : 'text-slate-900'}`}>{APP_NAME}</div>
-              {settings.name && settings.name !== APP_NAME && <div className="max-w-40 truncate text-[10px] text-slate-500">{settings.name}</div>}
+              {settings.name && settings.name !== APP_NAME && <div className="max-w-40 truncate text-xs text-slate-600">{settings.name}</div>}
             </div>
           </div>
           <nav ref={navRef} className="relative flex flex-1 gap-1 overflow-x-auto">
             {ind && <span aria-hidden className="pointer-events-none absolute bottom-0 left-0 top-0 rounded-full bg-brand-600 shadow-[0_8px_16px_-8px_rgba(40,69,97,.7)]"
               style={{ width: ind.width, transform: `translateX(${ind.left}px)`, transition: slide ? 'transform 320ms cubic-bezier(0.23,1,0.32,1), width 320ms cubic-bezier(0.23,1,0.32,1)' : 'none' }} />}
             {NAV.filter((n) => can(...n.perms)).map(({ to, label, icon: Icon }) => (
-              <NavLink key={to} to={to}
+              <NavLink key={to} to={to} title={label} aria-label={label}
                 className={({ isActive }) =>
-                  `relative z-10 flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-[color,background-color,transform] duration-150 active:scale-[.97] ${
+                  `relative z-10 flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-2 text-sm font-medium transition-[color,background-color,transform] duration-150 active:scale-[.97] ${
                     isActive ? 'text-white' : (dark ? 'text-slate-300 hover:bg-white/10' : 'text-slate-600 hover:bg-white/70')}`}>
-                <Icon size={16} /> {label}
+                {({ isActive }) => (<><Icon size={18} /><span className={isActive ? '' : 'hidden 2xl:inline'}>{label}</span></>)}
               </NavLink>
             ))}
           </nav>
           {right}
           <div className="flex items-center gap-2">
-            <span className={`hidden text-xs md:block ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <span className={`hidden text-xs 2xl:block ${dark ? 'text-slate-500' : 'text-slate-600'}`}>
               {profile?.full_name || profile?.email} · {profile?.role_label}
             </span>
             <button onClick={signOut} className={`btn btn-sm ${dark ? 'text-slate-300 hover:bg-white/10' : 'btn-ghost'}`} title="Cerrar sesión">

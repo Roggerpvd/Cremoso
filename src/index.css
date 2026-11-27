@@ -11,6 +11,14 @@
      · todo se desactiva con prefers-reduced-motion.
 ------------------------------------------------------------------ */
 @theme {
+  /* Escala de roles: base 17 px (html 106,25 %). text-sm ≈ 16 px (cuerpo), text-xs ≈ 13,6 px (secundario). */
+  --text-xs: 0.8rem;   --text-xs--line-height: 1.5;
+  --text-sm: 0.9375rem; --text-sm--line-height: 1.55;
+  --text-base: 1rem;   --text-base--line-height: 1.6;
+  --text-lg: 1.125rem; --text-lg--line-height: 1.45;
+  --text-xl: 1.3rem;   --text-xl--line-height: 1.35;
+  --text-2xl: 1.6rem;  --text-2xl--line-height: 1.25;
+  --text-3xl: 2rem;    --text-3xl--line-height: 1.15;
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --color-brand-50:  #f0f5fa;
   --color-brand-100: #dde8f2;
@@ -35,11 +43,14 @@
 }
 
 @layer base {
-  html { -webkit-tap-highlight-color: transparent; scrollbar-width: thin; scrollbar-color: rgba(70, 130, 180, .35) transparent; }
+  html { font-size: 106.25%; -webkit-tap-highlight-color: transparent; scrollbar-width: thin; scrollbar-color: rgba(70, 130, 180, .35) transparent; }
   body {
     @apply text-slate-900 antialiased;
     font-family: var(--font-sans);
-    font-feature-settings: "cv11", "ss03";
+    line-height: 1.55;
+    letter-spacing: 0;
+    text-rendering: optimizeLegibility;
+    -webkit-text-size-adjust: 100%;
     font-variant-numeric: tabular-nums;           /* precios y horas alineados */
     background-color: #f4f6f8;
     background-image:
@@ -50,15 +61,18 @@
   }
   ::selection { background: rgba(70, 130, 180, .28); }
   :focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; border-radius: 0.5rem; }
-  h1, h2, h3 { letter-spacing: -0.025em; text-wrap: balance; }
-  h1 { font-weight: 700; }
+  h1, h2, h3 { text-wrap: balance; }
+  h1 { font-weight: 700; letter-spacing: -0.02em; }
+  h2, h3 { letter-spacing: -0.01em; }
+  ::placeholder { color: #64748b; opacity: 1; }
+  label { cursor: default; }
   p { text-wrap: pretty; }
   button { @apply cursor-pointer; }
 }
 
 @layer components {
   /* Botones en forma de píldora: responden al presionar y al pasar el cursor */
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium select-none disabled:opacity-50 disabled:cursor-not-allowed;
+  .btn { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold select-none disabled:opacity-50 disabled:cursor-not-allowed;
          transition: transform 140ms var(--ease-out), box-shadow 200ms var(--ease-out), background-color 160ms ease, color 160ms ease, opacity 160ms ease; }
   .btn:active:not(:disabled) { transform: scale(.97); }
   .btn-primary { @apply bg-brand-600 text-white hover:bg-brand-700; box-shadow: 0 8px 16px -8px rgba(40, 69, 97, .7), inset 0 1px 0 rgba(255, 255, 255, .22); }
@@ -66,18 +80,18 @@
   .btn-secondary:active:not(:disabled) { box-shadow: inset 3px 3px 7px var(--neu-dark), inset -3px -3px 7px var(--neu-light); }
   .btn-danger { @apply bg-red-600 text-white hover:bg-red-700; box-shadow: 0 8px 16px -8px rgba(185, 28, 28, .6); }
   .btn-ghost { @apply text-slate-600 hover:bg-white/60; }
-  .btn-sm { @apply px-3 py-1.5 text-xs; }
-  .btn-lg { @apply px-6 py-3 text-base; }
+  .btn-sm { @apply min-h-9 px-3.5 py-2 text-[0.8125rem]; }
+  .btn-lg { @apply min-h-12 px-6 py-3 text-base; }
   @media (hover: hover) {
     .btn-primary:hover:not(:disabled), .btn-danger:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 20px -8px rgba(40, 69, 97, .75), inset 0 1px 0 rgba(255, 255, 255, .22); }
     .btn-primary:active:not(:disabled), .btn-danger:active:not(:disabled) { transform: scale(.97); }
   }
 
   /* Campos hundidos (neumorfismo) */
-  .input { @apply w-full rounded-xl border border-transparent bg-slate-100/80 px-3.5 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-200 disabled:opacity-60;
+  .input { @apply min-h-11 w-full rounded-xl border border-transparent bg-slate-100/80 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-200 disabled:opacity-60;
            box-shadow: inset 3px 3px 7px var(--neu-dark), inset -3px -3px 7px var(--neu-light);
            transition: background-color 160ms ease, border-color 160ms ease, box-shadow 200ms var(--ease-out); }
-  .label { @apply mb-1 block text-xs font-medium text-slate-500; }
+  .label { @apply mb-1.5 block text-[0.8125rem] font-semibold text-slate-700; }
 
   /* Tarjetas de vidrio (glassmorphism) */
   .card { @apply rounded-3xl border; background: var(--glass-bg); border-color: var(--glass-border); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 14px 34px -16px rgba(40, 69, 97, .28); }
@@ -87,12 +101,12 @@
   @media (hover: hover) { .press:hover { transform: translateY(-2px); box-shadow: 0 16px 30px -14px rgba(40, 69, 97, .35); } .press:active { transform: scale(.97); } }
 
   /* Chips y etiquetas */
-  .chip { @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-transparent bg-slate-100 px-3.5 py-1.5 text-sm font-medium text-slate-700;
+  .chip { @apply inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-full border border-transparent bg-slate-100 px-4 py-2 text-sm font-medium text-slate-800;
           box-shadow: 3px 3px 8px var(--neu-dark), -3px -3px 8px var(--neu-light);
           transition: transform 140ms var(--ease-out), box-shadow 200ms var(--ease-out), background-color 160ms ease, color 160ms ease; }
   .chip:active { transform: scale(.97); }
   .chip-on { @apply bg-brand-600 text-white; box-shadow: 0 8px 16px -8px rgba(40, 69, 97, .7), inset 0 1px 0 rgba(255, 255, 255, .22); }
-  .badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold; }
+  .badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold; }
 
   /* Titular grande */
   .display { @apply font-bold text-slate-950; font-size: clamp(2.25rem, 6vw, 3.75rem); line-height: .98; letter-spacing: -0.04em; }

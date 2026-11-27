@@ -36,14 +36,14 @@ export default function Login() {
           <span className="text-lg font-bold tracking-tight">{APP_NAME}</span>
         </div>
         <h1 className="display">Pedidos, cocina y caja en un solo lugar.</h1>
-        <p className="mt-5 max-w-md text-base text-slate-500">
+        <p className="mt-5 max-w-md text-base text-slate-600">
           Acceso del personal{settings.name && settings.name !== APP_NAME ? ` · ${settings.name}` : ''}. Cada puesto entra con su usuario y ve solo lo que le corresponde.
         </p>
       </div>
       <form onSubmit={submit} className="card w-full space-y-4 p-6 sm:p-8">
         <div>
           <h2 className="text-xl font-bold">Iniciar sesión</h2>
-          <p className="text-sm text-slate-500">Usa tu usuario y contraseña.</p>
+          <p className="text-sm text-slate-600">Usa tu usuario y contraseña.</p>
         </div>
         <div>
           <label className="label" htmlFor="user">Usuario</label>
@@ -53,7 +53,7 @@ export default function Login() {
           <label className="label" htmlFor="pw">Contraseña</label>
           <input id="pw" className="input" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
-        <label className="flex items-start gap-2 text-xs text-slate-500">
+        <label className="flex items-start gap-2 text-xs text-slate-600">
           <input type="checkbox" className="mt-0.5" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
           <span>Mantener la sesión en este equipo (úsalo solo en equipos de un único puesto, p. ej. la tableta de cocina). Si no lo marcas, cada pestaña tiene su propia sesión.</span>
         </label>

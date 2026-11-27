@@ -9,17 +9,21 @@
 // Despliegue (una sola vez):
 //   npx supabase login
 //   npx supabase link --project-ref <tu-project-ref>
-//   npx supabase functions deploy staff-admin
+//   npx supabase functions deploy staff-admin --no-verify-jwt
+// (--no-verify-jwt es seguro aquí: la función valida por sí misma el JWT de quien llama y su permiso users.manage)
 // Opcional (si el dominio por defecto es rechazado por Supabase Auth, usa uno tuyo; no se envían correos):
 //   npx supabase secrets set STAFF_EMAIL_DOMAIN=tu-dominio.pe
 // Debe coincidir con STAFF_EMAIL_DOMAIN de public/config.js.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-const cors = {
+// CORS: se devuelven los mismos encabezados que pide el navegador, para que la llamada funcione con cualquier versión de supabase-js.
+let cors: Record<string, string> = {}
+const corsFor = (req: Request) => ({
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': req.headers.get('Access-Control-Request-Headers') ?? 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+  'Access-Control-Max-Age': '86400',
+})
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
@@ -27,6 +31,7 @@ const DOMAIN = (Deno.env.get('STAFF_EMAIL_DOMAIN') || 'restopos.local').toLowerC
 const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,29}$/
 
 Deno.serve(async (req) => {
+  cors = corsFor(req)
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'METHOD_NOT_ALLOWED' }, 405)
 

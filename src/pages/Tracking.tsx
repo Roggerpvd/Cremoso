@@ -44,7 +44,7 @@ export default function Tracking() {
     catch (e) { toast(errorMessage(e), 'error') }
   }
 
-  const sColor: Record<string, string> = { pending: 'text-amber-600', preparing: 'text-sky-600', ready: 'text-emerald-600', delivered: 'text-slate-600' }
+  const sColor: Record<string, string> = { pending: 'text-amber-700', preparing: 'text-sky-700', ready: 'text-emerald-700', delivered: 'text-slate-600' }
   const sPlural: Record<string, string> = { pending: 'Pendientes', preparing: 'En preparación', ready: 'Listos', delivered: 'Entregados' }
 
   return (
@@ -62,7 +62,7 @@ export default function Tracking() {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
-            <Search size={15} className="absolute left-3 top-2.5 text-slate-400" />
+            <Search size={15} className="absolute left-3 top-2.5 text-slate-500" />
             <input className="input w-44 pl-9" placeholder="Mesa o #pedido" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           {(['all', 'internal', 'qr'] as const).map((c) => (
@@ -78,7 +78,7 @@ export default function Tracking() {
         {loading ? <Loading /> : error ? <ErrorBox text={error} onRetry={reload} /> : rows.length === 0 ? <Empty text="No hay pedidos con estos filtros" /> : (
           <div className="card overflow-x-auto">
             <table className="w-full min-w-[780px] text-sm">
-              <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+              <thead className="bg-slate-50 text-left text-xs uppercase text-slate-600">
                 <tr><th className="p-3">Pedido</th><th className="p-3">Mesa</th><th className="p-3">Hora</th><th className="p-3">Productos</th><th className="p-3">Canal</th><th className="p-3">Estado</th><th className="p-3 text-right">Total</th><th className="p-3" /></tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -88,20 +88,20 @@ export default function Tracking() {
                     <tr key={o.id} className="align-top hover:bg-slate-50">
                       <td className="p-3 text-base font-bold">#{o.order_number}</td>
                       <td className="p-3 font-medium">{tableLabel(o.tables)}</td>
-                      <td className="p-3 whitespace-nowrap">{timeHM(o.created_at)}<div className="text-xs text-slate-400">{elapsedLabel(o.created_at, now)}</div></td>
+                      <td className="p-3 whitespace-nowrap">{timeHM(o.created_at)}<div className="text-xs text-slate-500">{elapsedLabel(o.created_at, now)}</div></td>
                       <td className="p-3">
                         {o.order_items.slice().sort((a, b) => a.line_no - b.line_no).map((it) => (
                           <div key={it.id}><b>{it.quantity}×</b> {it.product_name}{it.notes && <span className="ml-1 inline-flex items-center gap-0.5 text-xs text-amber-700"><StickyNote size={11} />{it.notes}</span>}</div>
                         ))}
-                        {o.customer_note && <div className="text-xs italic text-slate-500">“{o.customer_note}”</div>}
+                        {o.customer_note && <div className="text-xs italic text-slate-600">“{o.customer_note}”</div>}
                       </td>
                       <td className="p-3"><ChannelBadge channel={o.channel} /></td>
-                      <td className="p-3"><StatusBadge status={o.status} /><div className={`mt-1 text-xs ${o.payment_status === 'paid' ? 'text-emerald-600' : 'text-slate-400'}`}>{o.payment_status === 'paid' ? 'Pagado' : 'Sin pagar'}</div></td>
+                      <td className="p-3"><StatusBadge status={o.status} /><div className={`mt-1 text-xs ${o.payment_status === 'paid' ? 'text-emerald-700' : 'text-slate-500'}`}>{o.payment_status === 'paid' ? 'Pagado' : 'Sin pagar'}</div></td>
                       <td className="p-3 text-right font-semibold">{fmt(o.total)}</td>
                       <td className="p-3">
                         <div className="flex justify-end gap-1.5">
                           {next && <button className="btn btn-primary btn-sm" onClick={() => advance(o, next.to)}>{next.label}</button>}
-                          {can('orders.cancel') && o.status !== 'delivered' && o.payment_status === 'unpaid' && <button className="btn btn-secondary btn-sm text-red-600" onClick={() => cancel(o)}>Cancelar</button>}
+                          {can('orders.cancel') && o.status !== 'delivered' && o.payment_status === 'unpaid' && <button className="btn btn-secondary btn-sm text-red-700" onClick={() => cancel(o)}>Cancelar</button>}
                         </div>
                       </td>
                     </tr>

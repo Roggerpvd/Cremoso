@@ -31,6 +31,8 @@ export async function q<T>(p: PromiseLike<{ data: unknown; error: unknown }>): P
 async function staffAdmin<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke('staff-admin', { body })
   if (error) {
+    // "Failed to send a request to the Edge Function" = el navegador no llegó a la función (no publicada, nombre distinto o bloqueada por CORS)
+    if ((error as { name?: string }).name === 'FunctionsFetchError' || (error as { name?: string }).name === 'FunctionsRelayError') throw new AppError({ message: 'FUNCTION_UNREACHABLE' })
     // FunctionsHttpError trae la respuesta en error.context; FunctionsFetchError = sin red
     let code = ''
     try { code = (await (error as unknown as { context: Response }).context.json())?.error ?? '' } catch { /* sin cuerpo */ }

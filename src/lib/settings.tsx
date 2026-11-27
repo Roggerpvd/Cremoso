@@ -32,7 +32,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 
-/** URL base de los QR: la configurada en Ajustes o, si no hay, la del navegador actual. */
+/**
+ * Deja solo el origen de la dirección: "https://sitio.pe/login" → "https://sitio.pe".
+ * Si falta el protocolo se asume https. Devuelve null si no es una dirección válida.
+ */
+export function normalizeBaseUrl(raw: string | null | undefined): string | null {
+  const v = (raw ?? '').trim()
+  if (!v) return null
+  try {
+    const u = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(v) ? v : `https://${v}`)
+    return u.protocol === 'http:' || u.protocol === 'https:' ? u.origin : null
+  } catch { return null }
+}
+
+/** URL base de los QR: la configurada en Ajustes (solo el dominio) o, si no hay, la del navegador actual. */
 export function qrBaseUrl(s: RestaurantSettings): string {
-  return (s.public_base_url?.trim() || window.location.origin).replace(/\/+$/, '')
+  return normalizeBaseUrl(s.public_base_url) ?? window.location.origin
 }

@@ -14,6 +14,12 @@ Guía de lo aplicado a la interfaz y de dónde sale. Las tres referencias son re
 - Entradas de lista: escalonado de 28 ms con tope de 8 elementos (`.stagger`); una sola entrada por pantalla (`.page-enter`, 240 ms)
 - Todo se desactiva con `prefers-reduced-motion`
 
+## Legibilidad (tipografía, espaciado y contraste)
+- **Base de 17 px** (`html { font-size: 106.25% }`): `text-sm` ≈ 16 px para el cuerpo y `text-xs` ≈ 13,6 px para lo secundario (nada por debajo). Interlineado 1,5–1,6, sin tracking negativo en el texto corriente.
+- **Contraste:** los textos secundarios pasaron de `slate-400/500` a `slate-500/600`, y los colores de estado a la gama 700. Se midió con axe-core (WCAG AA): 0 textos con poco contraste en todas las pantallas (`AXE=1 python3 tests/ui-smoke/smoke.py`).
+- **Espaciado:** botones y campos de al menos 40 px de alto, más aire interno en chips, etiquetas y fichas.
+- **Menú superior:** en pantallas menores de 1536 px solo la pantalla activa muestra su nombre; el resto son íconos con su nombre al pasar el cursor.
+
 ## Componentes
 - **Calendario** (`DatePicker.tsx`): primera semana en lunes, hoy marcado, rango sombreado en Reportes, teclado (flechas, AvPág/RePág, Inicio/Fin, Esc), atajos «Hoy» y «Ayer».
 - **Menú superior:** el indicador azul desliza entre pantallas.

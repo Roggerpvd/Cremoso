@@ -20,7 +20,7 @@ const PERMISSION_GROUPS: { title: string; items: { key: string; label: string }[
     { key: 'orders.create', label: 'Tomar pedidos (Caja)' },
     { key: 'orders.edit', label: 'Modificar pedidos pendientes' },
     { key: 'orders.cancel', label: 'Cancelar pedidos' },
-    { key: 'orders.serve', label: 'Marcar pedidos como entregados' },
+    { key: 'orders.serve', label: 'Marcar pedidos como entregados (botón de Cocina y Caja)' },
     { key: 'orders.kitchen', label: 'Cocina: pasar a “en preparación” y “listo”' },
   ] },
   { title: 'Dinero', items: [
@@ -91,7 +91,7 @@ export default function Users() {
       <div className="mx-auto max-w-5xl space-y-6 p-3 sm:p-6">
         <div>
           <h1 className="text-3xl">Personal y puestos</h1>
-          <p className="mt-1 text-sm text-slate-500">Crea cuentas con usuario y contraseña y define qué puede hacer cada puesto. No necesitas entrar a Supabase.</p>
+          <p className="mt-1 text-sm text-slate-600">Crea cuentas con usuario y contraseña y define qué puede hacer cada puesto. No necesitas entrar a Supabase.</p>
         </div>
 
         {loading ? <Loading /> : error ? <ErrorBox text={error} onRetry={load} /> : (
@@ -108,7 +108,7 @@ export default function Users() {
                     <div key={u.id} className="flex flex-wrap items-center gap-3 p-4">
                       <div className="min-w-48 flex-1">
                         <input className="input mb-1.5" placeholder="Nombre" value={d.full_name} onChange={(e) => set(u, { full_name: e.target.value })} />
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-slate-600">
                           Usuario: <b className="text-slate-700">{emailToUsername(u.email)}</b>{u.id === profile?.id && ' (tú)'}
                         </div>
                       </div>
@@ -119,7 +119,7 @@ export default function Users() {
                       <Toggle checked={d.is_active} onChange={(v) => set(u, { is_active: v })} label="Activo" />
                       <button className="btn btn-secondary btn-sm" onClick={() => resetPassword(u)} title="Cambiar contraseña"><KeyRound size={14} /> Contraseña</button>
                       <button className="btn btn-primary btn-sm" disabled={!dirty} onClick={() => save(u)}><Save size={14} /> Guardar</button>
-                      {u.id !== profile?.id && <button className="btn btn-ghost btn-sm !px-2 text-red-600" onClick={() => removeUser(u)} title="Eliminar usuario" aria-label={`Eliminar a ${u.full_name || emailToUsername(u.email)}`}><UserMinus size={15} /></button>}
+                      {u.id !== profile?.id && <button className="btn btn-ghost btn-sm !px-2 text-red-700" onClick={() => removeUser(u)} title="Eliminar usuario" aria-label={`Eliminar a ${u.full_name || emailToUsername(u.email)}`}><UserMinus size={15} /></button>}
                     </div>
                   )
                 })}
@@ -140,18 +140,18 @@ export default function Users() {
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="font-semibold">{r.label}</div>
-                          <div className="text-xs text-slate-500">{count} usuario{count === 1 ? '' : 's'}{r.is_system && ' · del sistema'}</div>
+                          <div className="text-xs text-slate-600">{count} usuario{count === 1 ? '' : 's'}{r.is_system && ' · del sistema'}</div>
                         </div>
                         {r.name !== 'admin' && (
                           <div className="flex gap-1">
                             <button className="btn btn-ghost btn-sm !px-2" title="Editar" onClick={() => setRoleModal(r)}><Pencil size={14} /></button>
-                            {!r.is_system && <button className="btn btn-ghost btn-sm !px-2 text-red-600" title="Eliminar" onClick={() => removeRole(r)}><Trash2 size={14} /></button>}
+                            {!r.is_system && <button className="btn btn-ghost btn-sm !px-2 text-red-700" title="Eliminar" onClick={() => removeRole(r)}><Trash2 size={14} /></button>}
                           </div>
                         )}
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1">
                         {all ? <span className="badge bg-brand-100 text-brand-800">Todos los permisos</span>
-                          : r.permissions.length === 0 ? <span className="text-xs text-slate-400">Sin permisos</span>
+                          : r.permissions.length === 0 ? <span className="text-xs text-slate-500">Sin permisos</span>
                           : r.permissions.map((p) => <span key={p} className="badge bg-slate-100 text-slate-600">{permLabel(p)}</span>)}
                       </div>
                     </div>
@@ -216,7 +216,7 @@ function CreateUser({ roles, onCreated }: { roles: Role[]; onCreated: () => void
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-slate-500">Entrégale el usuario y la contraseña a la persona; podrás cambiarla cuando quieras. Minúsculas, números, punto, guion y guion bajo.</p>
+        <p className="text-xs text-slate-600">Entrégale el usuario y la contraseña a la persona; podrás cambiarla cuando quieras. Minúsculas, números, punto, guion y guion bajo.</p>
         <button className="btn btn-primary" disabled={busy}>{busy ? <Spinner /> : <><UserPlus size={15} /> Crear</>}</button>
       </div>
     </form>

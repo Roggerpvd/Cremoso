@@ -31,6 +31,8 @@ ORDER = dict(id='o1', order_number=12, table_id='t1', channel='qr', status='pend
 ORDER_AW = dict(ORDER, id='o3', order_number=14, status='pending', customer_note=None, is_confirmed=False, total=10,
                 order_items=[dict(id='i20', order_id='o3', product_id='p3', line_no=1, product_name='Jugo de mango', list_price=10, unit_price=10, quantity=1, notes=None, line_total=10)])
 ORDER['is_confirmed'] = True
+ORDER_RDY = dict(ORDER, id='o4', order_number=15, status='ready', ready_at='2026-01-01T00:10:00Z', customer_note=None, is_confirmed=True,
+                 order_items=[dict(id='i30', order_id='o4', product_id='p3', line_no=1, product_name='Jugo de mango', list_price=10, unit_price=10, quantity=1, notes=None, line_total=10)])
 PROFILE = dict(id='u1', email='admin@test.pe', full_name='Admin', is_active=True, role='admin', role_label='Administrador', permissions=['*'])
 TABLES = [dict(id='t1', number=5, name=None, capacity=4, qr_token='abc123', is_active=True)]
 
@@ -84,13 +86,32 @@ def handler(route, request):
         return ok(dict(access_token='a.b.c', token_type='bearer', expires_in=3600, expires_at=int(time.time()) + 3600, refresh_token='r', user=dict(id='u1', email='admin@test.pe', aud='authenticated', app_metadata={}, user_metadata={}, created_at='2026-01-01T00:00:00Z')))
     if path.startswith('/auth/v1/user'): return ok(dict(id='u1', email='admin@test.pe'))
     table = path.split('/rest/v1/')[1].split('?')[0] if '/rest/v1/' in path else ''
-    data = {'restaurant_settings': SETTINGS, 'categories': CATS, 'menu_products': PRODS, 'orders': [ORDER, ORDER_AW], 'tables': TABLES, 'payments': PAYMENTS, 'receipts': RECEIPTS, 'roles': ROLES, 'users': USERS}.get(table, [])
+    if route.request.method in ('PATCH', 'POST') and table == 'restaurant_settings': calls.append(('settings_update', body))
+    data = {'restaurant_settings': SETTINGS, 'categories': CATS, 'menu_products': PRODS, 'orders': [ORDER, ORDER_AW, ORDER_RDY], 'tables': TABLES, 'payments': PAYMENTS, 'receipts': RECEIPTS, 'roles': ROLES, 'users': USERS}.get(table, [])
     if obj and isinstance(data, list): data = data[0] if data else None
     if obj and not isinstance(data, list) and table == 'restaurant_settings': return ok(SETTINGS)
     return ok(data)
 CORS = {'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*'}
 
 errors = []
+AXE = os.environ.get('AXE')
+AXE_JS = '/tmp/axe/node_modules/axe-core/axe.min.js'
+AXE_SEEN, AXE_REPORT = set(), []
+
+def axe_audit(page):
+    """Mide el contraste de colores de la pantalla actual con axe-core (solo si AXE=1)."""
+    path = page.url.split('127.0.0.1:')[-1].split('/', 1)[-1].split('?')[0]
+    key = '/' + path
+    if key in AXE_SEEN: return
+    AXE_SEEN.add(key)
+    time.sleep(0.8)
+    page.add_script_tag(path=AXE_JS)
+    res = page.evaluate("""axe.run({runOnly: ['color-contrast']}).then(r => r.violations.flatMap(v => v.nodes.map(n => ({
+        t: n.target.join(' ').slice(0, 60), ratio: n.any[0] && n.any[0].data ? n.any[0].data.contrastRatio : null,
+        fg: n.any[0] && n.any[0].data ? n.any[0].data.fgColor : '', bg: n.any[0] && n.any[0].data ? n.any[0].data.bgColor : '',
+        size: n.any[0] && n.any[0].data ? n.any[0].data.fontSize : '' }))))""")
+    AXE_REPORT.append((key, res))
+
 def check(cond, msg):
     print(('PASS ' if cond else 'FAIL ') + msg)
     if not cond: errors.append(msg)
@@ -104,6 +125,11 @@ try:
         page = ctx.new_page()
         js_errors = []
         page.on('dialog', lambda d: d.accept())
+        if AXE:
+            _wfs = page.wait_for_selector
+            def _wrapped(sel, **kw):
+                r = _wfs(sel, **kw); axe_audit(page); return r
+            page.wait_for_selector = _wrapped
         page.on('pageerror', lambda e: js_errors.append(str(e) + ' @ ' + page.url + ' :: ' + (getattr(e, 'stack', '') or '')[:300]))
 
         # ---- Menú QR (móvil) ----
@@ -126,6 +152,8 @@ try:
         check(any(f == 'open_table_session' and b['p_token'] == 'abc123' for f, b in calls), 'QR: al abrir la carta se abre una sesión de mesa')
         check(page.url.rstrip('/').endswith('/m'), 'QR: el token se quita de la dirección (queda /m)')
         check(page.locator('link[rel=manifest]').count() == 0, 'QR: la carta del cliente NO declara manifest (no se ofrece instalar la app)')
+        if os.environ.get('SHOTS'):
+            page.set_viewport_size({'width': 390, 'height': 844}); time.sleep(0.5); page.screenshot(path='/tmp/shot_qr_movil.png'); page.set_viewport_size({'width': 1366, 'height': 800})
         check(page.locator('text=confirmará en unos momentos').count() > 0, 'QR: avisa que el personal debe confirmar el pedido')
         tab2 = ctx.new_page(); tab2.goto(f'http://127.0.0.1:{PORT}/m'); tab2.wait_for_selector('text=Escanea el código QR', timeout=8000)
         check(True, 'QR: una pestaña nueva sin escanear NO puede pedir (pide escanear el QR)'); tab2.close()
@@ -176,6 +204,10 @@ try:
         check(page.locator('section h2 span.bg-sky-500').count() == 0, 'Cocina: el punto de En preparación está apagado (no hay pedidos)')
         check(page.evaluate("getComputedStyle(document.querySelector('header').parentElement).backgroundColor") == 'rgb(255, 255, 255)', 'Cocina: el fondo es blanco')
         if os.environ.get('SHOTS'): page.screenshot(path='/tmp/shot_cocina.png')
+        check(page.locator('button:has-text("Marcar como entregado")').count() == 1, 'Cocina: el pedido listo tiene el botón «Marcar como entregado»')
+        check(page.locator('text=Esperando que el mozo').count() == 0 and page.locator('text=Mozo').count() == 0, 'Cocina: ya no se menciona al mozo')
+        page.locator('button:has-text("Marcar como entregado")').click(); time.sleep(0.6)
+        check(any(f == 'set_order_status' and b.get('p_order_id') == 'o4' and b.get('p_status') == 'delivered' for f, b in calls), 'Cocina: «Marcar como entregado» pasa el pedido a entregado')
         check(page.locator('text=sin cebolla').count() > 0, 'Cocina: muestra observaciones del ítem')
         check(page.locator('text=sin ají').count() > 0, 'Cocina: muestra la nota general')
         page.locator('button:has-text("Iniciar preparación")').click()
@@ -199,6 +231,19 @@ try:
         check('Comprobante' in t and t.strip().endswith('¡Gracias por su visita!'), 'Ticket: dice Comprobante y cierra con "¡Gracias por su visita!"')
         page.wait_for_function('window.__printed >= 1', timeout=3000)
         check(True, 'Ticket: dispara la impresión')
+        # Ajustes: la URL del QR se limpia a solo el dominio y se guarda
+        page.goto(f'http://127.0.0.1:{PORT}/ajustes'); page.wait_for_selector('text=Los QR abrirán', timeout=8000)
+        page.fill('input[placeholder="https://…"]', 'cremoso.pages.dev/login')
+        check(page.locator('text=https://cremoso.pages.dev/m/…').count() > 0, 'Ajustes: la vista previa muestra solo el dominio (sin /login)')
+        page.locator('button:has-text("Guardar ajustes")').click(); time.sleep(0.8)
+        su = [b for f, b in calls if f == 'settings_update']
+        check(bool(su) and su[-1]['public_base_url'] == 'https://cremoso.pages.dev' and 'qr_session_minutes' in su[-1], 'Ajustes: guarda la URL limpia junto con los ajustes del QR seguro')
+        legacy = {k: SETTINGS.pop(k) for k in ('qr_session_minutes', 'qr_requires_confirmation')}
+        page.goto(f'http://127.0.0.1:{PORT}/ajustes'); page.wait_for_selector('text=Falta actualizar la base de datos', timeout=8000)
+        page.locator('button:has-text("Guardar ajustes")').click(); time.sleep(0.8)
+        su = [b for f, b in calls if f == 'settings_update']
+        check('qr_session_minutes' not in su[-1] and 'name' in su[-1], 'Ajustes: sin la migración nueva se guarda igual (no envía las columnas que no existen)')
+        SETTINGS.update(legacy)
         # Calendario moderno: abre, navega con teclado y cambia la fecha
         page.goto(f'http://127.0.0.1:{PORT}/comprobantes'); page.wait_for_selector('[data-trigger]', timeout=8000)
         before = page.locator('[data-trigger]').inner_text()
@@ -282,5 +327,10 @@ finally:
     os.killpg(os.getpgid(srv.pid), signal.SIGTERM)
     os.remove(cfg) if os.path.exists(cfg) else None
 
+    if AXE:
+        print('\n=== INFORME DE CONTRASTE (axe-core, WCAG AA) ===')
+        for key, res in AXE_REPORT:
+            worst = sorted([r for r in res if r['ratio']], key=lambda r: r['ratio'])[:3]
+            print(f"{key:18s} {len(res):3d} textos con poco contraste" + ('' if not worst else '  peores: ' + ' | '.join(f"{w['ratio']}:1 {w['fg']} sobre {w['bg']} ({w['size']})" for w in worst)))
 print('\nRESULTADO:', 'TODO OK' if not errors else f'{len(errors)} FALLO(S)')
 sys.exit(1 if errors else 0)

@@ -69,7 +69,7 @@ export default function Kitchen() {
       <button className={`btn btn-sm ${sound ? 'btn-primary' : 'btn-secondary'}`}
         onClick={() => { unlockAudio(); setSound(!sound); if (!sound) beep(1) }}
         title="Sonido al llegar un pedido (el navegador exige activarlo con un clic)">
-        {sound ? <Volume2 size={15} /> : <VolumeX size={15} />} <span className="hidden sm:inline">{sound ? 'Sonido activo' : 'Activar sonido'}</span>
+        {sound ? <Volume2 size={15} /> : <VolumeX size={15} />} <span className="hidden 2xl:inline">{sound ? 'Sonido activo' : 'Activar sonido'}</span>
       </button>
       <button className="btn btn-sm btn-secondary" onClick={() => document.documentElement.requestFullscreen?.()} title="Pantalla completa">
         <Maximize size={15} />
@@ -91,7 +91,7 @@ export default function Kitchen() {
                 <span className="rounded-full bg-slate-100 px-2.5 text-base font-semibold text-slate-600">{cols[c.status].length}</span>
               </h2>
               <div className="flex-1 space-y-3 overflow-y-auto p-3">
-                {cols[c.status].length === 0 && <p className="py-8 text-center text-slate-400">Sin pedidos</p>}
+                {cols[c.status].length === 0 && <p className="py-8 text-center text-slate-500">Sin pedidos</p>}
                 {cols[c.status].map((o) => {
                   const next = nextAction(o, can)
                   const undo = undoAction(o, can)
@@ -105,8 +105,8 @@ export default function Kitchen() {
                           <div className="mt-1 text-lg font-semibold text-brand-700">{tableLabel(o.tables)}</div>
                         </div>
                         <div className="text-right">
-                          <div className={`text-xl font-bold ${late ? 'text-red-600' : ''}`}>{elapsedLabel(o.created_at, now)}</div>
-                          <div className="text-xs text-slate-500">ingresó {timeHM(o.created_at)}</div>
+                          <div className={`text-xl font-bold ${late ? 'text-red-700' : ''}`}>{elapsedLabel(o.created_at, now)}</div>
+                          <div className="text-xs text-slate-600">ingresó {timeHM(o.created_at)}</div>
                           <div className="mt-1"><ChannelBadge channel={o.channel} /></div>
                         </div>
                       </div>
@@ -126,14 +126,14 @@ export default function Kitchen() {
                         <div className="mt-3 flex gap-2">
                           {next && (
                             <button disabled={busy.has(o.id)} onClick={() => move(o, next.to)}
-                              className="btn btn-primary btn-lg flex-1">
+                              className="btn btn-primary btn-lg flex-1 whitespace-nowrap !px-3">
                               {next.label}
                             </button>
                           )}
-                          {undo && <button disabled={busy.has(o.id)} onClick={() => move(o, undo.to)} className="btn btn-secondary" title={undo.label}><Undo2 size={18} /></button>}
+                          {undo && <button disabled={busy.has(o.id)} onClick={() => move(o, undo.to)} className="btn btn-secondary btn-lg !px-4" title={undo.label}><Undo2 size={18} /></button>}
                         </div>
                       )}
-                      {!next && o.status === 'ready' && <p className="mt-3 text-center text-sm font-medium text-emerald-700">Esperando que el mozo lo entregue</p>}
+                      {!next && o.status === 'ready' && <p className="mt-3 text-center text-sm font-medium text-emerald-800">Listo para entregar</p>}
                     </article>
                   )
                 })}

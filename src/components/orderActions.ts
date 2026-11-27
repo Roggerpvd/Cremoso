@@ -7,7 +7,7 @@ export interface Action { to: OrderStatus; label: string }
 export function nextAction(o: Order, can: Can): Action | null {
   if (o.status === 'pending' && can('orders.kitchen')) return { to: 'preparing', label: 'Iniciar preparación' }
   if (o.status === 'preparing' && can('orders.kitchen')) return { to: 'ready', label: 'Marcar listo' }
-  if (o.status === 'ready' && can('orders.serve')) return { to: 'delivered', label: 'Entregar' }
+  if (o.status === 'ready' && can('orders.serve')) return { to: 'delivered', label: 'Marcar como entregado' }
   return null
 }
 
