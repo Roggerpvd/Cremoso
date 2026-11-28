@@ -23,6 +23,10 @@ export interface RestaurantSettings {
   qr_ordering_enabled: boolean
   qr_max_pending_per_table: number
   qr_session_minutes: number            // 0 = sin sesiones
+  delivery_enabled: boolean
+  delivery_fee_default: number
+  delivery_min_order: number
+  delivery_whatsapp: string | null
   qr_requires_confirmation: boolean     // los pedidos del QR esperan a Caja
   public_base_url: string | null
   receipt_footer: string | null
@@ -107,6 +111,15 @@ export interface Order {
   table_id: string | null   // null = pedido sin mesa (para llevar / mostrador)
   is_confirmed: boolean     // false = pedido del QR que Caja aún no aceptó
   channel: OrderChannel
+  order_kind: 'local' | 'delivery'
+  delivery_name: string | null
+  delivery_phone: string | null
+  delivery_address: string | null
+  delivery_reference: string | null
+  delivery_fee: number
+  delivery_change_for: number | null
+  driver_name: string | null
+  dispatched_at: string | null
   status: OrderStatus
   payment_status: PaymentStatus
   customer_note: string | null
@@ -155,6 +168,11 @@ export interface TableInfo {
   qr_enabled: boolean
   session_id: string | null
   requires_confirmation: boolean
+  // solo en la carta pública (/menu): pedido por WhatsApp
+  delivery_enabled?: boolean
+  delivery_whatsapp?: string | null
+  delivery_fee?: number
+  delivery_min_order?: number
 }
 
 export interface PublicOrder {

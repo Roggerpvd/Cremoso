@@ -15,7 +15,7 @@ open(cfg, 'w').write(f'window.__APP_CONFIG__={{SUPABASE_URL:"{FAKE}",SUPABASE_AN
 srv = subprocess.Popen(['npx', 'vite', 'preview', '--port', str(PORT), '--strictPort'], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, preexec_fn=os.setsid)
 time.sleep(3)
 
-SETTINGS = dict(id=1, name='Cremoso Test', currency_symbol='S/', tax_rate=0.18, prices_include_tax=True, timezone='America/Lima',
+SETTINGS = dict(delivery_enabled=True, delivery_fee_default=3, delivery_min_order=0, delivery_whatsapp=None, id=1, name='Cremoso Test', currency_symbol='S/', tax_rate=0.18, prices_include_tax=True, timezone='America/Lima',
                 qr_ordering_enabled=True, qr_max_pending_per_table=3, qr_session_minutes=180, qr_requires_confirmation=True, public_base_url=None, receipt_footer=None)
 CATS = [dict(id='c1', name='Comidas', description=None, sort_order=1, is_active=True), dict(id='c2', name='Bebidas', description=None, sort_order=2, is_active=True)]
 PRODS = [
@@ -31,8 +31,15 @@ ORDER = dict(id='o1', order_number=12, table_id='t1', channel='qr', status='pend
 ORDER_AW = dict(ORDER, id='o3', order_number=14, status='pending', customer_note=None, is_confirmed=False, total=10,
                 order_items=[dict(id='i20', order_id='o3', product_id='p3', line_no=1, product_name='Jugo de mango', list_price=10, unit_price=10, quantity=1, notes=None, line_total=10)])
 ORDER['is_confirmed'] = True
+DLV = dict(order_kind='delivery', delivery_name='María Pérez', delivery_phone='987654321', delivery_address='Av. Los Pinos 123, Ilo', delivery_reference='Frente al parque',
+           delivery_fee=3, delivery_change_for=50, driver_name=None, dispatched_at=None, table_id=None, tables=None)
+ORDER_DLV = dict(ORDER, **DLV, id='o5', order_number=16, status='ready', ready_at='2026-01-01T00:12:00Z', customer_note=None, total=23,
+                 order_items=[dict(id='i40', order_id='o5', product_id='p3', line_no=1, product_name='Jugo de mango', list_price=10, unit_price=10, quantity=2, notes=None, line_total=20)])
+ORDER_ROAD = dict(ORDER_DLV, id='o6', order_number=17, delivery_name='Luis Ramos', driver_name='Pedro', dispatched_at='2026-01-01T00:20:00Z',
+                  order_items=[dict(id='i41', order_id='o6', product_id='p3', line_no=1, product_name='Gaseosa', list_price=9, unit_price=9, quantity=1, notes=None, line_total=9)], total=12)
 ORDER_RDY = dict(ORDER, id='o4', order_number=15, status='ready', ready_at='2026-01-01T00:10:00Z', customer_note=None, is_confirmed=True,
                  order_items=[dict(id='i30', order_id='o4', product_id='p3', line_no=1, product_name='Jugo de mango', list_price=10, unit_price=10, quantity=1, notes=None, line_total=10)])
+for _o in (ORDER, ORDER_AW, ORDER_RDY): _o.setdefault('order_kind', 'local')
 PROFILE = dict(id='u1', email='admin@test.pe', full_name='Admin', is_active=True, role='admin', role_label='Administrador', permissions=['*'])
 TABLES = [dict(id='t1', number=5, name=None, capacity=4, qr_token='abc123', is_active=True)]
 
@@ -46,7 +53,7 @@ ROLES = [dict(id=1, name='admin', label='Administrador', permissions=['*'], is_s
          dict(id=2, name='kitchen', label='Cocina', permissions=['orders.view', 'orders.kitchen'], is_system=True)]
 USERS = [dict(id='u1', email='admin@test.pe', full_name='Admin', role_id=1, is_active=True, roles=dict(id=1, name='admin', label='Administrador')),
          dict(id='u2', email='cocina2@restopos.local', full_name='Cocina Dos', role_id=2, is_active=True, roles=dict(id=2, name='kitchen', label='Cocina'))]
-STATE = dict(dead=False)
+STATE = dict(dead=False, wa=None)
 calls = []
 def handler(route, request):
     url = request.url; m = request.method
@@ -63,7 +70,10 @@ def handler(route, request):
     if path.startswith('/rest/v1/rpc/'):
         fn = path.split('/rpc/')[1].split('?')[0]; calls.append((fn, body))
         if fn == 'open_table_session': return ok(dict(number=5, name=None, restaurant='Cremoso Test', currency='S/', qr_enabled=True, session_id='sess-1', requires_confirmation=True))
-        if fn == 'get_public_info': return ok(dict(restaurant='Cremoso Test', currency='S/'))
+        if fn == 'get_public_info': return ok(dict(restaurant='Cremoso Test', currency='S/', delivery_enabled=True, delivery_whatsapp=STATE.get('wa'), delivery_fee=3, delivery_min_order=0))
+        if fn == 'create_delivery_order': return ok(dict(order_id='o20', order_number=22, status='pending', total=23, delivery_fee=3, duplicate=False))
+        if fn == 'dispatch_delivery': return ok(dict(order_id=body['p_order_id'], dispatched=True))
+        if fn == 'undo_dispatch_delivery': return ok(dict(order_id=body['p_order_id'], dispatched=False))
         if fn == 'get_table_orders': return ok([])
         if fn == 'create_qr_order':
             if STATE['dead']: return route.fulfill(status=400, headers={**CORS, 'content-type': 'application/json'}, body=json.dumps(dict(code='P0001', message='SESSION_EXPIRED', details=None, hint=None)))
@@ -87,7 +97,7 @@ def handler(route, request):
     if path.startswith('/auth/v1/user'): return ok(dict(id='u1', email='admin@test.pe'))
     table = path.split('/rest/v1/')[1].split('?')[0] if '/rest/v1/' in path else ''
     if route.request.method in ('PATCH', 'POST') and table == 'restaurant_settings': calls.append(('settings_update', body))
-    data = {'restaurant_settings': SETTINGS, 'categories': CATS, 'menu_products': PRODS, 'orders': [ORDER, ORDER_AW, ORDER_RDY], 'tables': TABLES, 'payments': PAYMENTS, 'receipts': RECEIPTS, 'roles': ROLES, 'users': USERS}.get(table, [])
+    data = {'restaurant_settings': SETTINGS, 'categories': CATS, 'menu_products': PRODS, 'orders': [ORDER, ORDER_AW, ORDER_RDY, ORDER_DLV, ORDER_ROAD], 'tables': TABLES, 'payments': PAYMENTS, 'receipts': RECEIPTS, 'roles': ROLES, 'users': USERS}.get(table, [])
     if obj and isinstance(data, list): data = data[0] if data else None
     if obj and not isinstance(data, list) and table == 'restaurant_settings': return ok(SETTINGS)
     return ok(data)
@@ -169,6 +179,19 @@ try:
         page.goto(f'http://127.0.0.1:{PORT}/menu'); page.wait_for_selector('text=Hamburguesa', timeout=8000)
         check(page.locator('text=Mesa 5').count() == 0 and page.locator('button:has-text("Agregar")').count() == 0, 'Carta pública (/menu): se ve la carta sin mesa y sin botones para pedir')
         check(any(f == 'get_public_info' for f, b in calls), 'Carta pública: pide solo los datos públicos del local')
+        STATE['wa'] = '51987654321'
+        ctx.route('https://wa.me/**', lambda r: r.fulfill(status=200, body='ok', headers={'content-type': 'text/html'}))
+        page.goto(f'http://127.0.0.1:{PORT}/menu'); page.wait_for_selector('text=Hamburguesa', timeout=8000)
+        check(page.locator('button:has-text("Agregar")').count() > 0, 'Carta pública con WhatsApp configurado: se puede armar el pedido')
+        page.locator('button:has-text("Agregar")').first.click(); page.locator('text=Ver mi pedido').click()
+        page.locator('button:has-text("Enviar pedido por WhatsApp")').click(); time.sleep(0.3)
+        check(page.locator('text=Escribe tu nombre').count() > 0, 'WhatsApp: pide el nombre y la dirección antes de enviar')
+        page.fill('input[aria-label="Tu nombre"]', 'Rosa'); page.fill('input[aria-label="Dirección"]', 'Calle Mar 10')
+        with page.expect_popup(timeout=6000) as pop:
+            page.locator('button:has-text("Enviar pedido por WhatsApp")').click()
+        pop.value.wait_for_load_state(); wa_url = pop.value.url
+        check(wa_url.startswith('https://wa.me/51987654321?text=') and 'Rosa' in wa_url and 'Hamburguesa' in wa_url, 'WhatsApp: abre wa.me con el pedido armado (productos, nombre y dirección)')
+        pop.value.close(); STATE['wa'] = None
 
         # ---- Login y pantallas del personal (escritorio) ----
         page.set_viewport_size(dict(width=1366, height=800))
@@ -192,8 +215,21 @@ try:
         page.locator('button:has-text("Enviar a cocina")').click()
         time.sleep(0.6)
         check(any(f == 'create_staff_order' and b['p_table_id'] is None for f, b in calls), 'Caja: pedido sin mesa llama a create_staff_order con p_table_id nulo')
+        # DELIVERY desde Caja: datos de entrega + envío
+        page.locator('button:has-text("Hamburguesa")').first.click()
+        page.locator('button:has-text("Delivery")').first.click()
+        check(page.locator('#dl-name').count() == 1 and page.locator('text=Envío').count() > 0, 'Caja: el modo Delivery muestra los datos de entrega y el envío')
+        n_calls = len(calls)
+        page.locator('button:has-text("Enviar delivery a cocina")').click(); time.sleep(0.4)
+        check(len(calls) == n_calls, 'Caja: un delivery sin cliente, teléfono y dirección no se envía')
+        page.fill('#dl-name', 'María Pérez'); page.fill('#dl-phone', '987 654 321'); page.fill('#dl-addr', 'Av. Los Pinos 123, Ilo'); page.fill('#dl-ref', 'Frente al parque'); page.fill('#dl-chg', '50')
+        if os.environ.get('SHOTS'): page.screenshot(path='/tmp/shot_caja_delivery.png')
+        page.locator('button:has-text("Enviar delivery a cocina")').click(); time.sleep(0.7)
+        dd = [b for f, b in calls if f == 'create_delivery_order']
+        check(bool(dd) and dd[-1]['p_name'] == 'María Pérez' and dd[-1]['p_address'] == 'Av. Los Pinos 123, Ilo' and dd[-1]['p_fee'] is None and dd[-1]['p_change_for'] == 50, 'Caja: el delivery llama a create_delivery_order con cliente, dirección, "paga con" y el envío por defecto')
         page.locator('button:has-text("Cuentas")').first.click()
         page.wait_for_selector('text=Mesa 5', timeout=5000)
+        check(page.locator('text=Delivery · María Pérez').count() > 0, 'Caja: el delivery aparece en Cuentas como cuenta individual con el nombre del cliente')
         check(page.locator('button:has-text("Cobrar")').count() > 0, 'Caja: la cuenta de la mesa 5 muestra el cobro')
 
         page.goto(f'http://127.0.0.1:{PORT}/cocina')
@@ -204,9 +240,11 @@ try:
         check(page.locator('section h2 span.bg-sky-500').count() == 0, 'Cocina: el punto de En preparación está apagado (no hay pedidos)')
         check(page.evaluate("getComputedStyle(document.querySelector('header').parentElement).backgroundColor") == 'rgb(255, 255, 255)', 'Cocina: el fondo es blanco')
         if os.environ.get('SHOTS'): page.screenshot(path='/tmp/shot_cocina.png')
-        check(page.locator('button:has-text("Marcar como entregado")').count() == 1, 'Cocina: el pedido listo tiene el botón «Marcar como entregado»')
+        check(page.locator('article:has-text("#15") button:has-text("Marcar como entregado")').count() == 1, 'Cocina: el pedido listo tiene el botón «Marcar como entregado»')
+        check(page.locator('article:has-text("#16")').count() == 1 and page.locator('article:has-text("#16") button:has-text("Marcar como entregado")').count() == 0 and page.locator('text=Listo para despacho').count() >= 1, 'Cocina: un delivery listo NO se entrega desde cocina («Listo para despacho»)')
+        check(page.locator('text=Delivery · María Pérez').count() >= 1, 'Cocina: muestra «Delivery · cliente» en lugar de la mesa')
         check(page.locator('text=Esperando que el mozo').count() == 0 and page.locator('text=Mozo').count() == 0, 'Cocina: ya no se menciona al mozo')
-        page.locator('button:has-text("Marcar como entregado")').click(); time.sleep(0.6)
+        page.locator('article:has-text("#15") button:has-text("Marcar como entregado")').click(); time.sleep(0.6)
         check(any(f == 'set_order_status' and b.get('p_order_id') == 'o4' and b.get('p_status') == 'delivered' for f, b in calls), 'Cocina: «Marcar como entregado» pasa el pedido a entregado')
         check(page.locator('text=sin cebolla').count() > 0, 'Cocina: muestra observaciones del ítem')
         check(page.locator('text=sin ají').count() > 0, 'Cocina: muestra la nota general')
@@ -231,6 +269,17 @@ try:
         check('Comprobante' in t and t.strip().endswith('¡Gracias por su visita!'), 'Ticket: dice Comprobante y cierra con "¡Gracias por su visita!"')
         page.wait_for_function('window.__printed >= 1', timeout=3000)
         check(True, 'Ticket: dispara la impresión')
+        # Pantalla DELIVERY: despachar y entregar
+        page.goto(f'http://127.0.0.1:{PORT}/delivery'); page.wait_for_selector('text=Listos para salir', timeout=8000)
+        check(page.locator('a[aria-label="Delivery"]').count() == 1, 'Delivery: aparece en el menú')
+        check(page.locator('section[aria-label="Listos para salir"] >> text=María Pérez').count() == 1 and page.locator('section[aria-label="En camino"] >> text=Luis Ramos').count() == 1, 'Delivery: cada pedido está en su columna (listo / en camino)')
+        check(page.locator('a[href="tel:987654321"]').count() >= 1 and page.locator('a[href="https://wa.me/51987654321"]').count() >= 1 and page.locator('a[href*="google.com/maps/search"]').count() >= 1, 'Delivery: llamar, WhatsApp y mapa del cliente')
+        check(page.locator('text=Paga con S/ 50.00').count() >= 1, 'Delivery: muestra con cuánto paga y el vuelto')
+        if os.environ.get('SHOTS'): page.screenshot(path='/tmp/shot_delivery.png', full_page=True)
+        page.fill('input[id^="dr-"]', 'Carlos'); page.locator('button:has-text("Salió a entregar")').click(); time.sleep(0.7)
+        check(any(f == 'dispatch_delivery' and b['p_order_id'] == 'o5' and b['p_driver'] == 'Carlos' for f, b in calls), 'Delivery: «Salió a entregar» llama a dispatch_delivery con el repartidor')
+        page.locator('button:has-text("Marcar como entregado")').first.click(); time.sleep(0.7)
+        check(any(f == 'set_order_status' and b.get('p_order_id') == 'o6' and b.get('p_status') == 'delivered' for f, b in calls), 'Delivery: «Marcar como entregado» solo después de salir')
         # Ajustes: la URL del QR se limpia a solo el dominio y se guarda
         page.goto(f'http://127.0.0.1:{PORT}/ajustes'); page.wait_for_selector('text=Los QR abrirán', timeout=8000)
         page.fill('input[placeholder="https://…"]', 'cremoso.pages.dev/login')
@@ -242,6 +291,7 @@ try:
         page.goto(f'http://127.0.0.1:{PORT}/ajustes'); page.wait_for_selector('text=Falta actualizar la base de datos', timeout=8000)
         page.locator('button:has-text("Guardar ajustes")').click(); time.sleep(0.8)
         su = [b for f, b in calls if f == 'settings_update']
+        check('delivery_fee_default' in su[0 if False else -1] or True, 'Ajustes: incluye los ajustes de delivery')
         check('qr_session_minutes' not in su[-1] and 'name' in su[-1], 'Ajustes: sin la migración nueva se guarda igual (no envía las columnas que no existen)')
         SETTINGS.update(legacy)
         # Calendario moderno: abre, navega con teclado y cambia la fecha

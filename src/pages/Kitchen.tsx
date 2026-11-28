@@ -7,7 +7,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { useOrders } from '../hooks/useOrders'
 import { useNow } from '../hooks/useNow'
 import { useToast } from '../components/Toast'
-import { beep, elapsedLabel, minutesSince, tableLabel, timeHM, unlockAudio } from '../lib/util'
+import { beep, elapsedLabel, minutesSince, orderPlace, timeHM, unlockAudio } from '../lib/util'
 import { errorMessage } from '../lib/errors'
 import type { Order, OrderStatus } from '../lib/types'
 
@@ -40,11 +40,11 @@ export default function Kitchen() {
   const soundRef = useMemo(() => ({ on: sound }), [sound])
   const onNew = useCallback((o: Order) => {
     if (soundRef.on) beep(3)
-    toast(`Nuevo pedido #${o.order_number} · ${tableLabel(o.tables)}`, 'info')
+    toast(`Nuevo pedido #${o.order_number} · ${orderPlace(o)}`, 'info')
   }, [soundRef, toast])
   const onCancelled = useCallback((o: Order) => {
     if (soundRef.on) beep(1)
-    toast(`Pedido #${o.order_number} (${tableLabel(o.tables)}) fue CANCELADO`, 'error')
+    toast(`Pedido #${o.order_number} (${orderPlace(o)}) fue CANCELADO`, 'error')
   }, [soundRef, toast])
   const { orders, conn, loading, error, reload, changeStatus } = useOrders({ onNew, onCancelled })
 
@@ -102,7 +102,7 @@ export default function Kitchen() {
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-2 text-3xl font-extrabold leading-none"><PhaseDot on dot={DOT_BY_STATUS[o.status]} glow={COLUMNS.find((x) => x.status === o.status)?.glow ?? ''} size="h-2.5 w-2.5" />#{o.order_number}</div>
-                          <div className="mt-1 text-lg font-semibold text-brand-700">{tableLabel(o.tables)}</div>
+                          <div className="mt-1 text-lg font-semibold text-brand-700">{orderPlace(o)}</div>
                         </div>
                         <div className="text-right">
                           <div className={`text-xl font-bold ${late ? 'text-red-700' : ''}`}>{elapsedLabel(o.created_at, now)}</div>
@@ -133,7 +133,7 @@ export default function Kitchen() {
                           {undo && <button disabled={busy.has(o.id)} onClick={() => move(o, undo.to)} className="btn btn-secondary btn-lg !px-4" title={undo.label}><Undo2 size={18} /></button>}
                         </div>
                       )}
-                      {!next && o.status === 'ready' && <p className="mt-3 text-center text-sm font-medium text-emerald-800">Listo para entregar</p>}
+                      {!next && o.status === 'ready' && <p className="mt-3 text-center text-sm font-medium text-emerald-800">{o.order_kind === 'delivery' ? (o.dispatched_at ? 'En camino con el repartidor' : 'Listo para despacho') : 'Listo para entregar'}</p>}
                     </article>
                   )
                 })}

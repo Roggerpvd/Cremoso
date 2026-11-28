@@ -1,7 +1,7 @@
 import { Ticket } from '../components/Ticket'
 import { printNode } from '../components/Print'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Banknote, Printer, CreditCard, Minus, Pencil, Plus, Search, Send, Smartphone, StickyNote, Trash2, X, Landmark, Wallet } from 'lucide-react'
+import { Banknote, Bike, Printer, CreditCard, Minus, Pencil, Plus, Search, Send, Smartphone, StickyNote, Trash2, X, Landmark, Wallet } from 'lucide-react'
 import { AppShell } from '../components/AppShell'
 import { ChannelBadge, ConnectionPill, Empty, ErrorBox, Loading, StatusBadge } from '../components/ui'
 import { useAuth } from '../auth/AuthProvider'
@@ -13,7 +13,7 @@ import { supabase } from '../lib/supabase'
 import { api, q } from '../lib/api'
 import { errorCode, errorMessage } from '../lib/errors'
 import { imageUrl } from '../lib/image'
-import { beep, tableLabel, uuid } from '../lib/util'
+import { beep, orderPlace, tableLabel, uuid } from '../lib/util'
 import { METHOD_LABEL, type CartLine, type MenuProduct, type Order, type PaymentMethod, type TableRow } from '../lib/types'
 
 export default function Pos() {
@@ -22,7 +22,7 @@ export default function Pos() {
   const ord = useOrders({
     onAwaiting: (o) => { beep(2); toast(`Pedido #${o.order_number} del QR por confirmar · ${tableLabel(o.tables)}`, 'info') },
   })
-  const [tab, setTab] = useState<'new' | 'accounts'>(can('orders.create') ? 'new' : 'accounts')
+  const [tab, setTab] = useState<'new' | 'accounts'>(() => (new URLSearchParams(window.location.search).get('tab') === 'cuentas' || !can('orders.create') ? 'accounts' : 'new'))
   const [editing, setEditing] = useState<Order | null>(null)
   const unpaid = ord.orders.filter((o) => o.payment_status === 'unpaid')
 
@@ -53,12 +53,16 @@ export default function Pos() {
 function NewOrder({ orders, editing, onDone, onCancelEdit }: {
   orders: Order[]; editing: Order | null; onDone: () => void; onCancelEdit: () => void
 }) {
-  const { fmt } = useSettings()
+  const { fmt, settings } = useSettings()
   const toast = useToast()
   const menu = useMenu(true)
   const [tables, setTables] = useState<TableRow[]>([])
   const [tableId, setTableId] = useState<string>('')
   const [noTable, setNoTable] = useState(false) // pedido sin mesa (para llevar / mostrador)
+  const [delivery, setDelivery] = useState(false) // pedido a domicilio
+  const emptyDlv = { name: '', phone: '', address: '', reference: '', fee: '', changeFor: '' }
+  const [dlv, setDlv] = useState(emptyDlv)
+  const feeNum = dlv.fee.trim() === '' ? Number(settings.delivery_fee_default) || 0 : Number(dlv.fee)
   const [lines, setLines] = useState<CartLine[]>([])
   const [note, setNote] = useState('')
   const [cat, setCat] = useState<string>('all')
@@ -74,7 +78,8 @@ function NewOrder({ orders, editing, onDone, onCancelEdit }: {
   useEffect(() => {
     if (!editing) return
     setTableId(editing.table_id ?? '')
-    setNoTable(!editing.table_id)
+    setNoTable(!editing.table_id && editing.order_kind !== 'delivery')
+    setDelivery(editing.order_kind === 'delivery')
     setNote(editing.customer_note ?? '')
     setLines(editing.order_items.slice().sort((a, b) => a.line_no - b.line_no).map((it) => {
       const p = menu.products.find((x) => x.id === it.product_id)
@@ -111,17 +116,26 @@ function NewOrder({ orders, editing, onDone, onCancelEdit }: {
   const total = lines.reduce((s, l) => s + l.product.final_price * l.quantity, 0)
   const hasUnavailable = lines.some((l) => !l.product.is_available)
 
-  function reset() { setLines([]); setNote(''); setTableId(''); setNoTable(false); requestId.current = uuid() }
+  function reset() { setLines([]); setNote(''); setTableId(''); setNoTable(false); setDelivery(false); setDlv(emptyDlv); requestId.current = uuid() }
 
   async function submit() {
     if (!lines.length) return toast('Agrega al menos un producto', 'error')
-    if (!editing && !noTable && !tableId) return toast('Selecciona una mesa o elige “Sin mesa”', 'error')
+    if (!editing && !noTable && !delivery && !tableId) return toast('Selecciona una mesa, elige “Sin mesa” o “Delivery”', 'error')
+    if (!editing && delivery) {
+      if (dlv.name.trim().length < 2) return toast('Escribe el nombre del cliente', 'error')
+      if (dlv.phone.replace(/\D/g, '').length < 6) return toast('Escribe un teléfono válido', 'error')
+      if (dlv.address.trim().length < 5) return toast('Escribe la dirección de entrega', 'error')
+      if (!Number.isFinite(feeNum) || feeNum < 0 || feeNum > 200) return toast('El costo de envío debe estar entre 0 y 200', 'error')
+    }
     const items = lines.map((l) => ({ product_id: l.product.id, quantity: l.quantity, notes: l.notes.trim() || undefined }))
     setBusy(true)
     try {
       if (editing) {
         await api.replaceOrderItems(editing.id, items, note)
         toast(`Pedido #${editing.order_number} actualizado`)
+      } else if (delivery) {
+        const r = await api.createDeliveryOrder({ items, name: dlv.name.trim(), phone: dlv.phone.trim(), address: dlv.address.trim(), reference: dlv.reference.trim(), fee: dlv.fee.trim() === '' ? null : feeNum, changeFor: dlv.changeFor.trim() === '' ? null : Number(dlv.changeFor), note: note.trim() || undefined }, requestId.current)
+        toast(`Delivery #${r.order_number} enviado a cocina · ${fmt(r.total)} (incluye envío ${fmt(r.delivery_fee)})`)
       } else {
         const r = await api.createStaffOrder(noTable ? null : tableId, items, note.trim() || undefined, requestId.current)
         toast(`Pedido #${r.order_number} enviado a cocina · ${fmt(r.total)}`)
@@ -184,19 +198,32 @@ function NewOrder({ orders, editing, onDone, onCancelEdit }: {
       <aside className="card h-fit p-4 lg:sticky lg:top-16">
         {editing && (
           <div className="mb-3 flex items-center justify-between rounded-lg bg-amber-50 p-2 text-sm text-amber-800">
-            <span>Editando pedido #{editing.order_number} · {tableLabel(editing.tables)}</span>
+            <span>Editando pedido #{editing.order_number} · {orderPlace(editing)}</span>
             <button className="btn btn-ghost btn-sm" onClick={() => { reset(); onCancelEdit() }}><X size={14} /> Salir</button>
           </div>
         )}
         {!editing && (
           <div className="mb-4">
             <div className="mb-2 flex gap-1.5">
-              <button type="button" onClick={() => setNoTable(false)} className={`chip flex-1 justify-center ${!noTable ? 'chip-on' : 'border-slate-300 bg-white'}`}>Con mesa</button>
-              <button type="button" onClick={() => { setNoTable(true); setTableId('') }} className={`chip flex-1 justify-center ${noTable ? 'chip-on' : 'border-slate-300 bg-white'}`}>Sin mesa</button>
+              <button type="button" onClick={() => { setNoTable(false); setDelivery(false) }} className={`chip flex-1 justify-center ${!noTable && !delivery ? 'chip-on' : 'border-slate-300 bg-white'}`}>Con mesa</button>
+              <button type="button" onClick={() => { setNoTable(true); setDelivery(false); setTableId('') }} className={`chip flex-1 justify-center ${noTable ? 'chip-on' : 'border-slate-300 bg-white'}`}>Sin mesa</button>
+              {settings.delivery_enabled && <button type="button" onClick={() => { setNoTable(false); setDelivery(true); setTableId('') }} className={`chip flex-1 justify-center ${delivery ? 'chip-on' : 'border-slate-300 bg-white'}`}><Bike size={16} /> Delivery</button>}
             </div>
             {noTable && <p className="rounded-lg bg-slate-100/70 p-2 text-xs text-slate-600">Pedido sin mesa (para llevar o mostrador). Se cobra por separado desde “Cuentas”.</p>}
-            {!noTable && <div className="label">Mesa</div>}
-            <div className={`grid grid-cols-5 gap-1.5 sm:grid-cols-6 lg:grid-cols-5 ${noTable ? 'hidden' : ''}`}>
+            {delivery && (
+              <div className="space-y-2.5" aria-label="Datos de entrega">
+                <div><label className="label" htmlFor="dl-name">Cliente</label><input id="dl-name" className="input" maxLength={80} value={dlv.name} onChange={(e) => setDlv({ ...dlv, name: e.target.value })} /></div>
+                <div><label className="label" htmlFor="dl-phone">Teléfono / WhatsApp</label><input id="dl-phone" className="input" inputMode="tel" maxLength={20} placeholder="987 654 321" value={dlv.phone} onChange={(e) => setDlv({ ...dlv, phone: e.target.value })} /></div>
+                <div><label className="label" htmlFor="dl-addr">Dirección</label><input id="dl-addr" className="input" maxLength={200} placeholder="Calle, número, urbanización" value={dlv.address} onChange={(e) => setDlv({ ...dlv, address: e.target.value })} /></div>
+                <div><label className="label" htmlFor="dl-ref">Referencia (opcional)</label><input id="dl-ref" className="input" maxLength={200} placeholder="Frente al parque, casa verde…" value={dlv.reference} onChange={(e) => setDlv({ ...dlv, reference: e.target.value })} /></div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div><label className="label" htmlFor="dl-fee">Envío ({settings.currency_symbol})</label><input id="dl-fee" className="input" inputMode="decimal" placeholder={String(settings.delivery_fee_default ?? 0)} value={dlv.fee} onChange={(e) => setDlv({ ...dlv, fee: e.target.value.replace(',', '.') })} /></div>
+                  <div><label className="label" htmlFor="dl-chg">Paga con ({settings.currency_symbol})</label><input id="dl-chg" className="input" inputMode="decimal" placeholder="Opcional" value={dlv.changeFor} onChange={(e) => setDlv({ ...dlv, changeFor: e.target.value.replace(',', '.') })} /></div>
+                </div>
+              </div>
+            )}
+            {!noTable && !delivery && <div className="label">Mesa</div>}
+            <div className={`grid grid-cols-5 gap-1.5 sm:grid-cols-6 lg:grid-cols-5 ${noTable || delivery ? 'hidden' : ''}`}>
               {tables.map((t) => (
                 <button key={t.id} onClick={() => setTableId(t.id)} title={t.name ?? ''}
                   className={`press rounded-xl border py-2 text-sm font-semibold ${
@@ -207,7 +234,7 @@ function NewOrder({ orders, editing, onDone, onCancelEdit }: {
               ))}
               {tables.length === 0 && <p className="col-span-full text-sm text-slate-500">No hay mesas. Créalas en “Mesas y QR”.</p>}
             </div>
-            {!noTable && <p className="mt-1 text-xs text-slate-500">Azul claro = mesa con cuenta abierta</p>}
+            {!noTable && !delivery && <p className="mt-1 text-xs text-slate-600">Azul claro = mesa con cuenta abierta</p>}
           </div>
         )}
 
@@ -241,11 +268,14 @@ function NewOrder({ orders, editing, onDone, onCancelEdit }: {
         <div className="mt-3 space-y-1 border-t border-slate-200 pt-3 text-sm">
           {subtotal !== total && <div className="flex justify-between text-slate-600"><span>Subtotal</span><span>{fmt(subtotal)}</span></div>}
           {subtotal !== total && <div className="flex justify-between text-emerald-700"><span>Promociones</span><span>− {fmt(subtotal - total)}</span></div>}
-          <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{fmt(total)}</span></div>
+          {delivery && !editing && <div className="flex justify-between text-slate-700"><span>Envío</span><span>{fmt(Number.isFinite(feeNum) ? feeNum : 0)}</span></div>}
+          <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{fmt(total + (delivery && !editing && Number.isFinite(feeNum) ? feeNum : 0))}</span></div>
+          {delivery && !editing && dlv.changeFor.trim() !== '' && Number(dlv.changeFor) >= total + feeNum && <div className="flex justify-between text-slate-700"><span>Vuelto</span><span>{fmt(Number(dlv.changeFor) - total - feeNum)}</span></div>}
+          {delivery && !editing && Number(settings.delivery_min_order) > 0 && total < Number(settings.delivery_min_order) && <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-900">Pedido mínimo para delivery: {fmt(Number(settings.delivery_min_order))}.</p>}
         </div>
         {hasUnavailable && <p className="mt-2 rounded bg-red-50 p-2 text-xs text-red-700">Hay productos agotados en el pedido. Quítalos para continuar.</p>}
         <button className="btn btn-primary btn-lg mt-3 w-full" disabled={busy || !lines.length || hasUnavailable} onClick={submit}>
-          <Send size={18} /> {editing ? 'Guardar cambios' : 'Enviar a cocina'}
+          <Send size={18} /> {editing ? 'Guardar cambios' : delivery ? 'Enviar delivery a cocina' : 'Enviar a cocina'}
         </button>
       </aside>
     </div>
@@ -314,7 +344,7 @@ function AccountCard({ orders, reload, onEdit }: { orders: Order[]; reload: () =
   return (
     <div className="card flex flex-col">
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-        <h3 className="text-lg font-bold">{orders[0].table_id ? tableLabel(orders[0].tables) : `Sin mesa · #${orders[0].order_number}`}</h3>
+        <h3 className="text-lg font-bold">{orders[0].order_kind === 'delivery' ? `${orderPlace(orders[0])} · #${orders[0].order_number}` : orders[0].table_id ? tableLabel(orders[0].tables) : `Sin mesa · #${orders[0].order_number}`}</h3>
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-600">{orders.length} pedido{orders.length > 1 ? 's' : ''}</span>
           <button className="btn btn-secondary btn-sm" onClick={() => printNode(<Ticket settings={settings} orders={chosen.length ? chosen : orders} kind="precuenta" />)}><Printer size={13} /> Pre-cuenta</button>

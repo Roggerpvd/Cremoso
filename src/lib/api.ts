@@ -50,7 +50,7 @@ export const api = {
   /** Abre (o reutiliza) la sesión de la mesa al escanear el QR. */
   openTableSession: (token: string, sessionId?: string | null) =>
     rpc<TableInfo>('open_table_session', { p_token: token, p_session_id: sessionId ?? null }),
-  publicInfo: () => rpc<{ restaurant: string; currency: string }>('get_public_info'),
+  publicInfo: () => rpc<{ restaurant: string; currency: string; delivery_enabled: boolean; delivery_whatsapp: string | null; delivery_fee: number; delivery_min_order: number }>('get_public_info'),
   createQrOrder: (token: string, sessionId: string | null, items: LineInput[], requestId: string, note?: string) =>
     rpc<{ order_id: string; order_number: number; status: OrderStatus; total: number; duplicate: boolean; awaiting_confirmation: boolean }>(
       'create_qr_order', { p_token: token, p_items: items, p_request_id: requestId, p_note: note || null, p_session_id: sessionId }),
@@ -71,6 +71,12 @@ export const api = {
       'register_payment', { p_order_ids: orderIds, p_method: method, p_reference: reference || null }),
   adminUpdateUser: (userId: string, roleId: number | null, fullName: string, active: boolean) =>
     rpc<{ user_id: string }>('admin_update_user', { p_user_id: userId, p_role_id: roleId, p_full_name: fullName, p_is_active: active }),
+  createDeliveryOrder: (d: { items: LineInput[]; name: string; phone: string; address: string; reference?: string; fee?: number | null; changeFor?: number | null; note?: string }, requestId: string) =>
+    rpc<{ order_id: string; order_number: number; status: OrderStatus; total: number; delivery_fee: number; duplicate: boolean }>('create_delivery_order', {
+      p_items: d.items, p_name: d.name, p_phone: d.phone, p_address: d.address, p_reference: d.reference || null,
+      p_fee: d.fee ?? null, p_change_for: d.changeFor ?? null, p_note: d.note || null, p_request_id: requestId }),
+  dispatchDelivery: (orderId: string, driver: string) => rpc<{ order_id: string }>('dispatch_delivery', { p_order_id: orderId, p_driver: driver || null }),
+  undoDispatchDelivery: (orderId: string) => rpc<{ order_id: string }>('undo_dispatch_delivery', { p_order_id: orderId }),
   confirmQrOrder: (orderId: string) => rpc<{ order_id: string }>('confirm_qr_order', { p_order_id: orderId }),
   rejectQrOrder: (orderId: string, reason?: string) => rpc<{ order_id: string }>('reject_qr_order', { p_order_id: orderId, p_reason: reason ?? null }),
   deleteStaffUser: (userId: string) => staffAdmin<{ user_id: string }>({ action: 'delete', user_id: userId }),

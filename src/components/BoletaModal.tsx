@@ -23,6 +23,9 @@ function initialLines(g: PaidGroup): BoletaLine[] {
     else m.set(k, { product: it.product_name, quantity: it.quantity, amount: Number(it.line_total) })
   }
   const lines = [...m.values()]
+  // El envío de un delivery se cobra al cliente, así que va como una línea más de la boleta (si no, el total no cuadraría)
+  const fee = g.orders.reduce((t, o) => t + (o.order_kind === 'delivery' ? Number(o.delivery_fee) : 0), 0)
+  if (fee > 0) lines.push({ product: 'Servicio de delivery', quantity: 1, amount: Math.round(fee * 100) / 100 })
   // Si por redondeo/impuestos la suma no coincide con lo cobrado, ajusta la última línea para cuadrar.
   const diff = cents(g.total) - cents(lines.reduce((t, l) => t + l.amount, 0))
   if (lines.length && diff !== 0) lines[lines.length - 1].amount = (cents(lines[lines.length - 1].amount) + diff) / 100

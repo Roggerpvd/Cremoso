@@ -21,6 +21,7 @@ const PERMISSION_GROUPS: { title: string; items: { key: string; label: string }[
     { key: 'orders.edit', label: 'Modificar pedidos pendientes' },
     { key: 'orders.cancel', label: 'Cancelar pedidos' },
     { key: 'orders.serve', label: 'Marcar pedidos como entregados (botón de Cocina y Caja)' },
+    { key: 'orders.delivery', label: 'Delivery: despachar con el repartidor y marcar entregado' },
     { key: 'orders.kitchen', label: 'Cocina: pasar a “en preparación” y “listo”' },
   ] },
   { title: 'Dinero', items: [

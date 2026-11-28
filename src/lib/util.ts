@@ -28,6 +28,13 @@ export function elapsedLabel(iso: string, now = Date.now()): string {
 export const tableLabel = (t: { number: number; name: string | null } | null | undefined) =>
   t ? `Mesa ${t.number}${t.name ? ` · ${t.name}` : ''}` : 'Sin mesa'
 
+/** Dónde va un pedido: «Mesa 5», «Sin mesa» o «Delivery · Nombre del cliente». */
+export const orderPlace = (o: { order_kind?: string; delivery_name?: string | null; tables?: { number: number; name: string | null } | null }) =>
+  o.order_kind === 'delivery' ? `Delivery${o.delivery_name ? ` · ${o.delivery_name}` : ''}` : tableLabel(o.tables)
+
+/** Teléfono peruano legible: 987654321 → 987 654 321 */
+export const phonePretty = (p: string | null | undefined) => (p ?? '').replace(/^(\d{3})(\d{3})(\d{3})$/, '$1 $2 $3')
+
 export const todayISO = (d = new Date()) => {
   const z = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
   return z.toISOString().slice(0, 10)

@@ -1,6 +1,6 @@
 import { APP_NAME } from '../lib/brand'
 import { METHOD_LABEL, type Order, type PaymentMethod, type RestaurantSettings } from '../lib/types'
-import { money, tableLabel } from '../lib/util'
+import { money, orderPlace, phonePretty } from '../lib/util'
 
 export interface TicketPayment { method: PaymentMethod; reference: string | null; paid_at: string }
 
@@ -20,7 +20,7 @@ export function Ticket({ settings: s, orders, kind, payment, boletaRef }: {
   const sorted = orders.slice().sort((a, b) => a.order_number - b.order_number)
   const sum = (k: 'subtotal' | 'discount_total' | 'tax_amount' | 'total') => sorted.reduce((t, o) => t + Number(o[k]), 0)
   const total = sum('total'), discount = sum('discount_total'), tax = sum('tax_amount')
-  const tables = [...new Set(sorted.map((o) => tableLabel(o.tables)))].join(' / ')
+  const tables = [...new Set(sorted.map((o) => orderPlace(o)))].join(' / ')
   const pct = Math.round(Number(s.tax_rate) * 10000) / 100
 
   return (
@@ -37,7 +37,16 @@ export function Ticket({ settings: s, orders, kind, payment, boletaRef }: {
       <hr />
       {sorted.map((o) => (
         <div key={o.id} style={{ marginBottom: 4 }}>
-          <div><b>Pedido #{o.order_number}</b> · {when(o.created_at).slice(-5)} · {CHANNEL[o.channel]}</div>
+          <div><b>Pedido #{o.order_number}</b> · {when(o.created_at).slice(-5)} · {o.order_kind === 'delivery' ? 'Delivery' : CHANNEL[o.channel]}</div>
+          {o.order_kind === 'delivery' && (
+            <div className="note" style={{ margin: '2px 0 4px' }}>
+              <div><b>{o.delivery_name}</b>{o.delivery_phone ? ` · Tel. ${phonePretty(o.delivery_phone)}` : ''}</div>
+              <div>{o.delivery_address}</div>
+              {o.delivery_reference && <div>Ref.: {o.delivery_reference}</div>}
+              {o.driver_name && <div>Repartidor: {o.driver_name}</div>}
+              {o.payment_status !== 'paid' && o.delivery_change_for ? <div>Paga con {fmt(Number(o.delivery_change_for))} · vuelto {fmt(Math.max(0, Number(o.delivery_change_for) - Number(o.total)))}</div> : null}
+            </div>
+          )}
           <table><tbody>
             {o.order_items.slice().sort((a, b) => a.line_no - b.line_no).map((it) => (
               <tr key={it.id}>
@@ -49,6 +58,9 @@ export function Ticket({ settings: s, orders, kind, payment, boletaRef }: {
                 <td className="r" style={{ whiteSpace: 'nowrap' }}>{fmt(it.line_total)}</td>
               </tr>
             ))}
+            {o.order_kind === 'delivery' && Number(o.delivery_fee) > 0 && (
+              <tr><td colSpan={2}>Envío (delivery)</td><td className="r" style={{ whiteSpace: 'nowrap' }}>{fmt(Number(o.delivery_fee))}</td></tr>
+            )}
           </tbody></table>
           {o.customer_note && <div className="note">Nota: {o.customer_note}</div>}
         </div>

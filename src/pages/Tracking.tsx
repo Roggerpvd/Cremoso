@@ -10,7 +10,7 @@ import { useToast } from '../components/Toast'
 import { useSettings } from '../lib/settings'
 import { api } from '../lib/api'
 import { errorMessage } from '../lib/errors'
-import { elapsedLabel, tableLabel, timeHM } from '../lib/util'
+import { elapsedLabel, orderPlace, timeHM } from '../lib/util'
 import { type Order, type OrderChannel, type OrderStatus } from '../lib/types'
 
 const STATES: OrderStatus[] = ['pending', 'preparing', 'ready', 'delivered']
@@ -87,7 +87,7 @@ export default function Tracking() {
                   return (
                     <tr key={o.id} className="align-top hover:bg-slate-50">
                       <td className="p-3 text-base font-bold">#{o.order_number}</td>
-                      <td className="p-3 font-medium">{tableLabel(o.tables)}</td>
+                      <td className="p-3 font-medium">{orderPlace(o)}</td>
                       <td className="p-3 whitespace-nowrap">{timeHM(o.created_at)}<div className="text-xs text-slate-500">{elapsedLabel(o.created_at, now)}</div></td>
                       <td className="p-3">
                         {o.order_items.slice().sort((a, b) => a.line_no - b.line_no).map((it) => (

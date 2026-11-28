@@ -7,6 +7,7 @@ import { isConfigured } from './lib/config'
 import Login from './pages/Login'
 import Pos from './pages/Pos'
 import Kitchen from './pages/Kitchen'
+import Delivery from './pages/Delivery'
 import Receipts from './pages/Receipts'
 import { PrintHost } from './components/Print'
 import Tracking from './pages/Tracking'
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="/caja" element={guard(['orders.create', 'payments.register'], <Pos />)} />
             <Route path="/comprobantes" element={guard(['payments.register'], <Receipts />)} />
             <Route path="/cocina" element={guard(['orders.view'], <Kitchen />)} />
+            <Route path="/delivery" element={guard(['orders.view'], <Delivery />)} />
             <Route path="/seguimiento" element={guard(['orders.view'], <Tracking />)} />
             <Route path="/carta" element={guard(['menu.manage'], <MenuAdmin />)} />
             <Route path="/mesas" element={guard(['tables.manage'], <Tables />)} />

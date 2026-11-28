@@ -94,7 +94,7 @@ export default function QrMenu({ readOnly = false }: { readOnly?: boolean }) {
         if (readOnly) {
           const p = await api.publicInfo()
           if (!alive) return
-          setInfo({ number: 0, name: null, restaurant: p.restaurant, currency: p.currency, qr_enabled: false, session_id: null, requires_confirmation: false })
+          setInfo({ number: 0, name: null, restaurant: p.restaurant, currency: p.currency, qr_enabled: false, session_id: null, requires_confirmation: false, delivery_enabled: p.delivery_enabled, delivery_whatsapp: p.delivery_whatsapp, delivery_fee: Number(p.delivery_fee), delivery_min_order: Number(p.delivery_min_order) })
           document.title = `${p.restaurant} · Carta`
           await loadMenu()
         } else if (!token) {
@@ -139,7 +139,10 @@ export default function QrMenu({ readOnly = false }: { readOnly?: boolean }) {
   const count = lines.reduce((s, l) => s + l.q, 0)
   const total = lines.reduce((s, l) => s + l.q * l.p.final_price, 0)
   const bad = lines.filter((l) => !l.p.is_available)
-  const canOrder = !readOnly && !ended && (info?.qr_enabled ?? false)
+  // Carta pública (/menu): si el local configuró su WhatsApp, el cliente arma el pedido y lo envía por WhatsApp (no entra al sistema hasta que Caja lo registre)
+  const viaWa = readOnly && !!info?.delivery_enabled && !!info?.delivery_whatsapp
+  const [wa, setWa] = useState({ name: '', address: '', reference: '' })
+  const canOrder = viaWa || (!readOnly && !ended && (info?.qr_enabled ?? false))
   const shown = prods.filter((p) => cat === 'all' || p.category_id === cat)
 
   const setQty = (id: string, d: number) => setCart((c) => {
@@ -150,6 +153,27 @@ export default function QrMenu({ readOnly = false }: { readOnly?: boolean }) {
     return n
   })
   const setLineNote = (id: string, v: string) => setCart((c) => (c[id] ? { ...c, [id]: { ...c[id], n: v.slice(0, 200) } } : c))
+
+  function sendWhatsApp() {
+    if (!info || !lines.length || bad.length) return
+    const name = wa.name.trim(), address = wa.address.trim()
+    if (name.length < 2) return setError('Escribe tu nombre.')
+    if (address.length < 5) return setError('Escribe la dirección de entrega.')
+    const min = Number(info.delivery_min_order ?? 0)
+    if (min > 0 && total < min) return setError(`El pedido mínimo para delivery es ${money_(min)}.`)
+    const fee = Number(info.delivery_fee ?? 0)
+    const text = [
+      `Hola ${info.restaurant}, quiero hacer un pedido a domicilio:`, '',
+      ...lines.map((l) => `• ${l.q}× ${l.p.name}${l.n.trim() ? ` (${l.n.trim()})` : ''} — ${money_(l.q * l.p.final_price)}`), '',
+      `Consumo: ${money_(total)}`,
+      ...(fee > 0 ? [`Envío (referencial): ${money_(fee)}`, `Total aprox.: ${money_(total + fee)}`] : []),
+      '', `Nombre: ${name}`, `Dirección: ${address}`,
+      ...(wa.reference.trim() ? [`Referencia: ${wa.reference.trim()}`] : []),
+      ...(note.trim() ? [`Nota: ${note.trim()}`] : []),
+    ].join('\n')
+    window.open(`https://wa.me/${info.delivery_whatsapp}?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
+    setError('')
+  }
 
   async function send() {
     if (!lines.length || bad.length) return
@@ -204,7 +228,7 @@ export default function QrMenu({ readOnly = false }: { readOnly?: boolean }) {
 
       {view === 'menu' ? (
         <main>
-          {!canOrder && <p className="m-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{readOnly ? 'Esta es la carta para ver. Para pedir, escanea el código QR de tu mesa o pídele al mozo.' : 'Los pedidos desde el celular están desactivados por ahora. Puedes ver la carta y pedirle al mozo.'}</p>}
+          {!canOrder && <p className="m-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{readOnly ? 'Esta es la carta para ver. Para pedir, escanea el código QR de tu mesa o pídele al mozo.' : 'Los pedidos desde el celular están desactivados por ahora. Puedes ver la carta y pedirle al mozo.'}</p>}
           {shown.length === 0 && <p className="p-10 text-center text-sm text-slate-500">No hay productos en esta categoría.</p>}
           <ul className="divide-y divide-slate-100">
             {shown.map((p) => {
@@ -291,13 +315,21 @@ export default function QrMenu({ readOnly = false }: { readOnly?: boolean }) {
                     <input className="input !py-1.5 text-sm" placeholder="¿Alguna indicación? (sin cebolla, poco picante…)" value={l.n} maxLength={200} onChange={(e) => setLineNote(l.p.id, e.target.value)} /></div>
                 </div>
               ))}
-              <textarea className="input" rows={2} maxLength={300} placeholder="Comentario general para cocina (opcional)" value={note} onChange={(e) => setNote(e.target.value)} />
+              {viaWa && (
+                <div className="space-y-2.5 rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+                  <div className="text-sm font-semibold">Datos para la entrega</div>
+                  <input className="input" maxLength={80} placeholder="Tu nombre" aria-label="Tu nombre" value={wa.name} onChange={(e) => setWa({ ...wa, name: e.target.value })} />
+                  <input className="input" maxLength={200} placeholder="Dirección (calle, número, urbanización)" aria-label="Dirección" value={wa.address} onChange={(e) => setWa({ ...wa, address: e.target.value })} />
+                  <input className="input" maxLength={200} placeholder="Referencia (opcional)" aria-label="Referencia" value={wa.reference} onChange={(e) => setWa({ ...wa, reference: e.target.value })} />
+                </div>
+              )}
+              <textarea className="input" rows={2} maxLength={300} placeholder={viaWa ? 'Comentario para el pedido (opcional)' : 'Comentario general para cocina (opcional)'} value={note} onChange={(e) => setNote(e.target.value)} />
               {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
             </div>
             <div className="space-y-3 border-t border-slate-200 p-5">
               <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{money_(total)}</span></div>
-              <button className="btn btn-primary btn-lg w-full" disabled={sending || bad.length > 0 || !lines.length} onClick={send}>{sending ? <><Spinner /> Enviando…</> : 'Confirmar pedido'}</button>
-              <p className="text-center text-xs text-slate-500">{info.requires_confirmation ? 'El personal confirma tu pedido antes de pasar a cocina. El pago se realiza con el personal.' : 'Tu pedido llegará directo a la cocina. El pago se realiza con el personal.'}</p>
+              <button className="btn btn-primary btn-lg w-full" disabled={sending || bad.length > 0 || !lines.length} onClick={viaWa ? sendWhatsApp : send}>{sending ? <><Spinner /> Enviando…</> : viaWa ? 'Enviar pedido por WhatsApp' : 'Confirmar pedido'}</button>
+              <p className="text-center text-xs text-slate-500">{viaWa ? 'Se abrirá WhatsApp con tu pedido listo para enviar. El local confirma el total, el tiempo y el pago por ese chat.' : info.requires_confirmation ? 'El personal confirma tu pedido antes de pasar a cocina. El pago se realiza con el personal.' : 'Tu pedido llegará directo a la cocina. El pago se realiza con el personal.'}</p>
             </div>
           </div>
         </div>

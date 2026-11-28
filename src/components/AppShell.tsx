@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { BarChart3, BookOpen, ChefHat, ListChecks, LogOut, QrCode, ReceiptText, Settings, ShoppingCart, Users } from 'lucide-react'
+import { BarChart3, Bike, BookOpen, ChefHat, ListChecks, LogOut, QrCode, ReceiptText, Settings, ShoppingCart, Users } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { useSettings } from '../lib/settings'
 import { APP_NAME } from '../lib/brand'
@@ -11,6 +11,7 @@ const NAV = [
   { to: '/caja', label: 'Caja', icon: ShoppingCart, perms: ['orders.create', 'payments.register'] },
   { to: '/comprobantes', label: 'Comprobantes', icon: ReceiptText, perms: ['payments.register'] },
   { to: '/cocina', label: 'Cocina', icon: ChefHat, perms: ['orders.view'] },
+  { to: '/delivery', label: 'Delivery', icon: Bike, perms: ['orders.view'] },
   { to: '/seguimiento', label: 'Seguimiento', icon: ListChecks, perms: ['orders.view'] },
   { to: '/carta', label: 'Carta', icon: BookOpen, perms: ['menu.manage'] },
   { to: '/mesas', label: 'Mesas y QR', icon: QrCode, perms: ['tables.manage'] },

@@ -14,11 +14,16 @@ export default function SettingsPage() {
   const [s, setS] = useState<RestaurantSettings>(settings)
   const [busy, setBusy] = useState(false)
   useEffect(() => setS(settings), [settings])
+  const legacyDlv = settings.delivery_enabled === undefined      // falta la migración 6 (delivery)
   const legacy = settings.qr_session_minutes === undefined   // la base de datos aún no tiene la migración 4
 
   async function save() {
     if (s.ruc && !/^\d{11}$/.test(s.ruc.trim())) { toast('El RUC debe tener 11 dígitos.', 'error'); return }
     const base = normalizeBaseUrl(s.public_base_url)
+    // WhatsApp: solo dígitos con código de país (51 + 9 dígitos); si escriben 987654321 se completa con 51
+    const waDigits = (s.delivery_whatsapp ?? '').replace(/\D/g, '')
+    const dlvWa = !waDigits ? null : waDigits.length === 9 ? `51${waDigits}` : waDigits
+    if (dlvWa && !/^\d{9,15}$/.test(dlvWa)) { toast('El WhatsApp no es válido. Ejemplo: 987654321', 'error'); return }
     if (s.public_base_url?.trim() && !base) { toast('La URL pública no es válida. Ejemplo: https://cremoso.pages.dev', 'error'); return }
     setBusy(true)
     try {
@@ -28,6 +33,7 @@ export default function SettingsPage() {
         qr_ordering_enabled: s.qr_ordering_enabled, qr_max_pending_per_table: Number(s.qr_max_pending_per_table),
         // Los dos ajustes de QR seguro solo existen si ya se ejecutó la migración 4; si no, no se envían (así el resto se puede guardar)
         ...(legacy ? {} : { qr_session_minutes: Math.max(0, Math.min(1440, Math.round(Number(s.qr_session_minutes) || 0))), qr_requires_confirmation: s.qr_requires_confirmation }),
+        ...(legacyDlv ? {} : { delivery_enabled: s.delivery_enabled, delivery_fee_default: Math.max(0, Math.min(200, Number(s.delivery_fee_default) || 0)), delivery_min_order: Math.max(0, Math.min(5000, Number(s.delivery_min_order) || 0)), delivery_whatsapp: dlvWa }),
         public_base_url: base, receipt_footer: s.receipt_footer?.trim() || null,
         legal_name: s.legal_name?.trim() || null, ruc: s.ruc?.trim() || null, address: s.address?.trim() || null, phone: s.phone?.trim() || null,
       }).eq('id', 1))
@@ -51,6 +57,15 @@ export default function SettingsPage() {
           <Field label="RUC" hint="11 dígitos."><input className="input" inputMode="numeric" maxLength={11} value={s.ruc ?? ''} onChange={(e) => setS({ ...s, ruc: e.target.value.replace(/\D/g, '') })} /></Field>
           <Field label="Teléfono (opcional)"><input className="input" value={s.phone ?? ''} onChange={(e) => setS({ ...s, phone: e.target.value })} /></Field>
           <div className="sm:col-span-2"><Field label="Dirección (opcional)"><input className="input" value={s.address ?? ''} onChange={(e) => setS({ ...s, address: e.target.value })} /></Field></div>
+          <div className="sm:col-span-2 border-t border-slate-200 pt-4"><h2 className="font-semibold">Delivery</h2></div>
+          {legacyDlv ? <div className="sm:col-span-2 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"><b>Falta actualizar la base de datos.</b> Ejecuta en Supabase el archivo <code>supabase/migrations/20260106000000_delivery.sql</code> para activar el delivery.</div> : (
+            <>
+              <div className="sm:col-span-2"><Toggle checked={s.delivery_enabled} onChange={(v) => setS({ ...s, delivery_enabled: v })} label="Aceptar pedidos a domicilio (delivery)" /></div>
+              <Field label={`Costo de envío por defecto (${s.currency_symbol})`} hint="Se propone en cada delivery; Caja puede cambiarlo en cada pedido."><input className="input" type="number" min={0} max={200} step="0.5" value={s.delivery_fee_default} onChange={(e) => setS({ ...s, delivery_fee_default: Number(e.target.value) })} /></Field>
+              <Field label={`Pedido mínimo para delivery (${s.currency_symbol})`} hint="0 = sin mínimo. Se compara con el consumo, sin contar el envío."><input className="input" type="number" min={0} max={5000} step="1" value={s.delivery_min_order} onChange={(e) => setS({ ...s, delivery_min_order: Number(e.target.value) })} /></Field>
+              <div className="sm:col-span-2"><Field label="WhatsApp del local para pedidos" hint="Con este número, la carta pública (QR de la carta) muestra «Pedir por WhatsApp» y el cliente te envía su pedido armado. Ejemplo: 987654321."><input className="input" inputMode="tel" placeholder="987654321" value={s.delivery_whatsapp ?? ''} onChange={(e) => setS({ ...s, delivery_whatsapp: e.target.value })} /></Field></div>
+            </>
+          )}
           <div className="sm:col-span-2 border-t border-slate-200 pt-4"><h2 className="font-semibold">Pedidos por QR</h2></div>
           <div className="sm:col-span-2"><Toggle checked={s.qr_ordering_enabled} onChange={(v) => setS({ ...s, qr_ordering_enabled: v })} label="Permitir pedir desde el celular (si lo apagas, la carta queda solo para ver)" /></div>
           <Field label="Máx. pedidos QR pendientes por mesa" hint="Freno anti-spam: cuántos pedidos puede tener una mesa esperando a cocina."><input className="input" type="number" min={1} max={20} value={s.qr_max_pending_per_table} onChange={(e) => setS({ ...s, qr_max_pending_per_table: Number(e.target.value) })} /></Field>

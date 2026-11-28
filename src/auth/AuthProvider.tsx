@@ -62,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 const HOME_ORDER: [string, string[]][] = [
   ['/caja', ['orders.create', 'payments.register']],
   ['/cocina', ['orders.kitchen']],
+  ['/delivery', ['orders.delivery']],
   ['/seguimiento', ['orders.view']],
   ['/carta', ['menu.manage']],
   ['/mesas', ['tables.manage']],

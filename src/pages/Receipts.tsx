@@ -10,7 +10,7 @@ import { q } from '../lib/api'
 import { errorMessage } from '../lib/errors'
 import { useSettings } from '../lib/settings'
 import { supabase } from '../lib/supabase'
-import { tableLabel, timeHM, todayISO } from '../lib/util'
+import { orderPlace, timeHM, todayISO } from '../lib/util'
 import { METHOD_LABEL, type Order, type PaidGroup, type PaymentMethod, type Receipt } from '../lib/types'
 
 interface PayRow { id: string; group_id: string; method: PaymentMethod; amount: number; reference: string | null; paid_at: string; orders: Order | null }
@@ -30,7 +30,7 @@ export default function Receipts() {
       const start = new Date(`${date}T00:00:00`)
       const end = new Date(start); end.setDate(end.getDate() + 1)
       const rows = await q<PayRow[]>(supabase.from('payments')
-        .select('id, group_id, method, amount, reference, paid_at, orders(id, order_number, table_id, channel, status, payment_status, customer_note, subtotal, discount_total, tax_amount, total, created_at, preparing_at, ready_at, delivered_at, paid_at, tables(number, name), order_items(*))')
+        .select('id, group_id, method, amount, reference, paid_at, orders(id, order_number, table_id, channel, order_kind, delivery_name, delivery_phone, delivery_address, delivery_reference, delivery_fee, delivery_change_for, driver_name, dispatched_at, status, payment_status, customer_note, subtotal, discount_total, tax_amount, total, created_at, preparing_at, ready_at, delivered_at, paid_at, tables(number, name), order_items(*))')
         .gte('paid_at', start.toISOString()).lt('paid_at', end.toISOString()).order('paid_at', { ascending: false }).limit(500))
       const m = new Map<string, PaidGroup>()
       for (const r of rows) {
@@ -68,7 +68,7 @@ export default function Receipts() {
               return (
                 <li key={g.group_id} className="card flex flex-wrap items-center gap-3 p-3">
                   <div className="min-w-0 flex-1">
-                    <div className="font-semibold">{[...new Set(g.orders.map((o) => tableLabel(o.tables)))].join(' / ')} · {fmt(g.total)}</div>
+                    <div className="font-semibold">{[...new Set(g.orders.map((o) => orderPlace(o)))].join(' / ')} · {fmt(g.total)}</div>
                     <div className="text-xs text-slate-600">{timeHM(g.paid_at)} · {METHOD_LABEL[g.method]} · pedidos {g.orders.map((o) => `#${o.order_number}`).join(', ')}</div>
                   </div>
                   {r ? <span className={`badge ${r.status === 'issued' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{r.status === 'issued' ? `Boleta ${r.sunat_ref}` : 'Boleta preparada (falta emitir)'}</span>

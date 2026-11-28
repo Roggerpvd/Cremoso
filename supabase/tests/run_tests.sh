@@ -9,6 +9,7 @@ MIGRATION2="$HERE/../migrations/20260102000000_receipts.sql"
 MIGRATION3="$HERE/../migrations/20260103000000_notable_roles.sql"
 MIGRATION4="$HERE/../migrations/20260104000000_qr_seguridad_y_personal.sql"
 MIGRATION5="$HERE/../migrations/20260105000000_sin_mozo_entrega_cocina.sql"
+MIGRATION6="$HERE/../migrations/20260106000000_delivery.sql"
 PGBIN="${PGBIN:-$(dirname "$(ls /usr/lib/postgresql/*/bin/initdb 2>/dev/null | sort -V | tail -1)")}"
 PORT="${PGPORT:-54999}"
 DATA="$(mktemp -d)"
@@ -35,6 +36,7 @@ run "$PSQL -d resto -f $MIGRATION2"
 run "$PSQL -d resto -f $MIGRATION3"
 run "$PSQL -d resto -f $MIGRATION4"
 run "$PSQL -d resto -f $MIGRATION5"
+run "$PSQL -d resto -f $MIGRATION6"
 echo "▶ Ejecutando pruebas funcionales y de seguridad"
 run "$PSQL -d resto -f $HERE/01_tests.sql" 2>&1 | sed -e 's/^psql:.*NOTICE:  //' -e 's/^NOTICE:  //' | grep -E "PASS|FAIL|===|ERROR" | tee "$HERE/last_run.log"
 if grep -q "FAIL\|ERROR" "$HERE/last_run.log"; then echo "✖ HAY FALLOS"; exit 1; fi
@@ -50,6 +52,9 @@ if grep -q "FAIL\|ERROR" "$HERE/last_run_qr_security.log"; then echo "✖ HAY FA
 echo "▶ Pruebas de puestos (sin Mozo, Cocina entrega) (migración 5)"
 run "$PSQL -d resto -f $HERE/../../supabase/tests/06_sin_mozo_tests.sql" 2>&1 | sed -e 's/^psql:.*NOTICE:  //' -e 's/^NOTICE:  //' | grep -E "PASS|FAIL|===|ERROR" | tee "$HERE/last_run_sin_mozo.log"
 if grep -q "FAIL\|ERROR" "$HERE/last_run_sin_mozo.log"; then echo "✖ HAY FALLOS EN SIN MOZO / ENTREGA DESDE COCINA"; exit 1; fi
+echo "▶ Pruebas de delivery (migración 6)"
+run "$PSQL -d resto -f $HERE/07_delivery_tests.sql" 2>&1 | sed -e 's/^psql:.*NOTICE:  //' -e 's/^NOTICE:  //' | grep -E "PASS|FAIL|===|ERROR" | tee "$HERE/last_run_delivery.log"
+if grep -q "FAIL\|ERROR" "$HERE/last_run_delivery.log"; then echo "✖ HAY FALLOS EN DELIVERY"; exit 1; fi
 echo "▶ Prueba de concurrencia (pgbench): 8 clientes, misma clave y claves distintas"
 run "$PSQL -d resto -f $HERE/02_concurrency_setup.sql"
 OUT=$(run "$PGBIN/pgbench -h /tmp -p $PORT -U postgres -n -c 8 -j 4 -t 25 -f $HERE/02_race_same_request.sql resto" 2>&1)

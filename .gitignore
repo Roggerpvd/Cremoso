@@ -12,3 +12,4 @@ supabase/tests/last_run.log
 supabase/tests/last_run_notable_roles.log
 supabase/tests/last_run_qr_security.log
 supabase/tests/last_run_sin_mozo.log
+supabase/tests/last_run_delivery.log
